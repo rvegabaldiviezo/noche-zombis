@@ -1,0 +1,16 @@
+# Archivos temporales
+*.log
+*.tmp
+*.bak
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

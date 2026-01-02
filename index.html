@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>🦇 Survival Horror 3D - Noche de los Muertos</title>
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: 'Arial', sans-serif;
+  cursor: none;
+  background: #000;
+}
+
+#hud {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: #ff4444;
+  background: rgba(0,0,0,0.85);
+  padding: 15px;
+  border-radius: 10px;
+  font-size: 16px;
+  min-width: 220px;
+  backdrop-filter: blur(5px);
+  border: 2px solid #660000;
+  box-shadow: 0 0 20px rgba(255,0,0,0.3);
+}
+
+#hud-right {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: #ff4444;
+  background: rgba(0,0,0,0.85);
+  padding: 15px;
+  border-radius: 10px;
+  font-size: 16px;
+  text-align: right;
+  backdrop-filter: blur(5px);
+  border: 2px solid #660000;
+  box-shadow: 0 0 20px rgba(255,0,0,0.3);
+}
+
+#bomb-indicator {
+  position: absolute;
+  top: 80px;
+  left: 10px;
+  color: #ffaa00;
+  background: rgba(0,0,0,0.85);
+  padding: 12px 15px;
+  border-radius: 10px;
+  font-size: 16px;
+  border: 2px solid #664400;
+  box-shadow: 0 0 20px rgba(255,170,0,0.3);
+}
+
+#bomb-cooldown {
+  width: 100px;
+  height: 8px;
+  background: #333;
+  border-radius: 4px;
+  margin-top: 5px;
+  overflow: hidden;
+}
+
+#bomb-cooldown-bar {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #ff6600, #ffaa00);
+  transition: width 0.1s linear;
+}
+
+#instructions {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.85);
+  color: #ff4444;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  backdrop-filter: blur(5px);
+  border: 2px solid #660000;
+}
+
+#crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.crosshair-line {
+  position: absolute;
+  background: rgba(255,50,50,0.9);
+  box-shadow: 0 0 5px rgba(255,0,0,0.5);
+}
+
+.crosshair-h {
+  width: 20px;
+  height: 2px;
+  left: -10px;
+  top: -1px;
+}
+
+.crosshair-v {
+  width: 2px;
+  height: 20px;
+  left: -1px;
+  top: -10px;
+}
+
+.crosshair-dot {
+  width: 4px;
+  height: 4px;
+  background: #ff0000;
+  border-radius: 50%;
+  left: -2px;
+  top: -2px;
+  box-shadow: 0 0 8px rgba(255,0,0,0.8);
+}
+
+#damage-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: radial-gradient(circle, transparent 30%, rgba(255,0,0,0) 100%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#damage-overlay.active {
+  background: radial-gradient(circle, transparent 30%, rgba(255,0,0,0.5) 100%);
+  opacity: 1;
+}
+
+#level-complete {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.95);
+  color: #44ff44;
+  padding: 40px 60px;
+  border-radius: 20px;
+  text-align: center;
+  display: none;
+  z-index: 1000;
+  border: 3px solid #226622;
+  box-shadow: 0 0 30px rgba(68,255,68,0.3);
+}
+
+#level-complete h1 {
+  margin: 0 0 20px 0;
+  font-size: 48px;
+  color: #44ff44;
+  text-shadow: 0 0 10px #44ff44;
+}
+
+#level-complete p {
+  font-size: 20px;
+  margin: 10px 0;
+  color: #88ff88;
+}
+
+#game-over {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.95);
+  color: #ff4444;
+  padding: 40px 60px;
+  border-radius: 20px;
+  text-align: center;
+  display: none;
+  z-index: 1000;
+  border: 3px solid #660000;
+  box-shadow: 0 0 30px rgba(255,0,0,0.5);
+}
+
+#game-over h1 {
+  margin: 0 0 20px 0;
+  font-size: 48px;
+  color: #ff0000;
+  text-shadow: 0 0 15px #ff0000;
+}
+
+#click-to-start {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.95);
+  color: #ff4444;
+  padding: 50px 70px;
+  border-radius: 20px;
+  text-align: center;
+  z-index: 1000;
+  cursor: pointer;
+  border: 3px solid #660000;
+  box-shadow: 0 0 40px rgba(255,0,0,0.5);
+}
+
+#click-to-start h1 {
+  margin: 0 0 20px 0;
+  font-size: 52px;
+  text-shadow: 0 0 15px #ff0000;
+}
+
+#click-to-start p {
+  color: #ff8888;
+}
+</style>
+</head>
+<body>
+
+<div id="hud">
+  🩸 Vida: <span id="vida">100</span>%<br>
+  💀 Ola: <span id="nivel">1</span><br>
+  ☠️ Bajas: <span id="bajas">0</span>
+</div>
+
+<div id="hud-right">
+  🧟 Zombis: <span id="enemigos-restantes">0</span><br>
+  👹 Jefe: <span id="jefe-vida">100</span>%
+</div>
+
+<div id="bomb-indicator">
+  💣 Bomba: <span id="bomb-status">LISTA</span>
+  <div id="bomb-cooldown">
+    <div id="bomb-cooldown-bar"></div>
+  </div>
+</div>
+
+<div id="instructions">
+  🎮 WASD mover | 🖱 Mouse apuntar | 🔫 Click disparar | 💣 ESPACIO bomba | ESC salir
+</div>
+
+<div id="crosshair">
+  <div class="crosshair-line crosshair-h"></div>
+  <div class="crosshair-line crosshair-v"></div>
+  <div class="crosshair-line crosshair-dot"></div>
+</div>
+
+<div id="damage-overlay"></div>
+
+<div id="level-complete">
+  <h1>✅ ¡OLA SOBREVIVIDA!</h1>
+  <p>Zombis eliminados: <span id="lc-bajas">0</span></p>
+  <p>Vida restante: <span id="lc-vida">0</span>%</p>
+  <p><em>Preparando siguiente ola...</em></p>
+</div>
+
+<div id="game-over">
+  <h1>☠️ HAS MUERTO</h1>
+  <p>Ola alcanzada: <span id="go-nivel">0</span></p>
+  <p>Bajas totales: <span id="go-bajas">0</span></p>
+  <p><em>Presiona F5 para reintentar</em></p>
+</div>
+
+<div id="click-to-start">
+  <h1>🦇 NOCHE DE LOS MUERTOS 🦇</h1>
+  <p style="font-size: 22px; margin: 20px 0;">¡Sobrevive a las olas de zombis!</p>
+  <p style="font-size: 16px; opacity: 0.8;">Haz click para comenzar la pesadilla</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+
+<script>
+// ============ VARIABLES GLOBALES ============
+let nivel = 1;
+let vidaJugador = 100;
+let enemigos = [];
+let jefe = null;
+let bajasTotal = 0;
+let gameStarted = false;
+let gamePaused = false;
+let canShoot = true;
+let shootCooldown = 200;
+
+// Sistema de bombas
+let bombaDisponible = true;
+let bombaCooldown = 6000;
+let bombasActivas = [];
+
+// Controles
+const keys = {};
+let mouseX = 0;
+let mouseY = 0;
+let rotationY = 0;
+let rotationX = 0;
+
+// Sacudida de cámara
+let cameraShake = 0;
+
+// ============ CONFIGURACIÓN THREE.JS ============
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x0f0f1e, 10, 60);
+
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+// ============ ILUMINACIÓN TERRORÍFICA ============
+const ambientLight = new THREE.AmbientLight(0x4a4a6a, 0.3);
+scene.add(ambientLight);
+
+const sun = new THREE.DirectionalLight(0x6a6a8a, 0.4);
+sun.position.set(50, 50, 50);
+sun.castShadow = true;
+sun.shadow.camera.left = -50;
+sun.shadow.camera.right = 50;
+sun.shadow.camera.top = 50;
+sun.shadow.camera.bottom = -50;
+sun.shadow.mapSize.width = 2048;
+sun.shadow.mapSize.height = 2048;
+scene.add(sun);
+
+// Luces ominosas
+const redLight = new THREE.PointLight(0xff0000, 0.5, 30);
+redLight.position.set(-20, 5, -20);
+scene.add(redLight);
+
+const greenLight = new THREE.PointLight(0x00ff00, 0.3, 25);
+greenLight.position.set(20, 5, -30);
+scene.add(greenLight);
+
+// ============ TEMAS DE NIVELES TERRORÍFICOS ============
+const levelThemes = {
+  1: { name: '🪦 Cementerio Maldito', sky: 0x1a1a2e, ground: 0x2d3436, fog: 0x0f0f1e },
+  2: { name: '🏥 Hospital Abandonado', sky: 0x2c2c3e, ground: 0x3d3d4d, fog: 0x1a1a2a },
+  3: { name: '🌲 Bosque Embrujado', sky: 0x0d1b0d, ground: 0x1a2e1a, fog: 0x0a150a },
+  4: { name: '🧪 Laboratorio Tóxico', sky: 0x1a2e1a, ground: 0x2d4a2d, fog: 0x0f1e0f },
+  5: { name: '🔥 Infierno Sangriento', sky: 0x4a0000, ground: 0x2e0000, fog: 0x3a0000 }
+};
+
+function aplicarTema(nivel) {
+  const tema = levelThemes[nivel] || levelThemes[5];
+  scene.background = new THREE.Color(tema.sky);
+  scene.fog = new THREE.Fog(tema.fog, 10, 60);
+  ground.material.color.setHex(tema.ground);
+}
+
+// ============ SUELO ============
+const groundGeometry = new THREE.PlaneGeometry(200, 200, 30, 30);
+const groundMaterial = new THREE.MeshStandardMaterial({
+  color: 0x2d3436,
+  roughness: 0.9,
+  metalness: 0.1
+});
+const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+
+// Agregar irregularidades al suelo
+for(let i = 0; i < groundGeometry.attributes.position.count; i++) {
+  const z = groundGeometry.attributes.position.getZ(i);
+  groundGeometry.attributes.position.setZ(i, z + Math.random() * 0.5 - 0.25);
+}
+groundGeometry.attributes.position.needsUpdate = true;
+groundGeometry.computeVertexNormals();
+
+scene.add(ground);
+
+// Obstáculos terroríficos (lápidas, rocas)
+function crearObstaculos() {
+  for(let i = 0; i < 20; i++) {
+    const isGrave = Math.random() > 0.5;
+
+    let obstacle;
+    if(isGrave) {
+      // Lápida
+      obstacle = new THREE.Mesh(
+        new THREE.BoxGeometry(0.8, 1.5, 0.2),
+        new THREE.MeshStandardMaterial({ color: 0x4a4a5a, roughness: 0.9 })
+      );
+      obstacle.position.y = 0.75;
+    } else {
+      // Roca
+      obstacle = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(0.5 + Math.random() * 1, 0),
+        new THREE.MeshStandardMaterial({ color: 0x3a3a4a, roughness: 0.95 })
+      );
+      obstacle.position.y = obstacle.geometry.parameters.radius / 2;
+    }
+
+    obstacle.position.set(
+      Math.random() * 80 - 40,
+      obstacle.position.y,
+      Math.random() * 80 - 40
+    );
+    obstacle.castShadow = true;
+    obstacle.receiveShadow = true;
+    scene.add(obstacle);
+  }
+}
+crearObstaculos();
+
+// ============ JUGADOR ============
+const player = new THREE.Group();
+
+const body = new THREE.Mesh(
+  new THREE.CapsuleGeometry(0.5, 1.2, 8, 16),
+  new THREE.MeshStandardMaterial({ color: 0x2a4a6a, roughness: 0.7 })
+);
+body.castShadow = true;
+player.add(body);
+
+const head = new THREE.Mesh(
+  new THREE.SphereGeometry(0.35, 16, 16),
+  new THREE.MeshStandardMaterial({ color: 0x2a4a6a })
+);
+head.position.set(0, 0.9, 0);
+head.castShadow = true;
+player.add(head);
+
+const eyeLeft = new THREE.Mesh(
+  new THREE.SphereGeometry(0.08, 8, 8),
+  new THREE.MeshStandardMaterial({ color: 0xffffff })
+);
+eyeLeft.position.set(-0.12, 1, 0.3);
+player.add(eyeLeft);
+
+const eyeRight = eyeLeft.clone();
+eyeRight.position.set(0.12, 1, 0.3);
+player.add(eyeRight);
+
+const pupilLeft = new THREE.Mesh(
+  new THREE.SphereGeometry(0.04, 8, 8),
+  new THREE.MeshStandardMaterial({ color: 0x000000 })
+);
+pupilLeft.position.set(-0.12, 1, 0.35);
+player.add(pupilLeft);
+
+const pupilRight = pupilLeft.clone();
+pupilRight.position.set(0.12, 1, 0.35);
+player.add(pupilRight);
+
+const earLeft = new THREE.Mesh(
+  new THREE.ConeGeometry(0.15, 0.4, 8),
+  new THREE.MeshStandardMaterial({ color: 0x1a3a5a })
+);
+earLeft.position.set(-0.3, 1.2, 0);
+earLeft.rotation.z = -Math.PI / 6;
+player.add(earLeft);
+
+const earRight = earLeft.clone();
+earRight.position.set(0.3, 1.2, 0);
+earRight.rotation.z = Math.PI / 6;
+player.add(earRight);
+
+// Arma
+const weapon = new THREE.Group();
+const gunBarrel = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.05, 0.05, 0.8, 8),
+  new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.8 })
+);
+gunBarrel.rotation.z = Math.PI / 2;
+gunBarrel.position.set(0.4, 0, 0.5);
+weapon.add(gunBarrel);
+
+const gunHandle = new THREE.Mesh(
+  new THREE.BoxGeometry(0.1, 0.3, 0.15),
+  new THREE.MeshStandardMaterial({ color: 0x3a2a1a })
+);
+gunHandle.position.set(0, 0, 0.5);
+weapon.add(gunHandle);
+
+player.add(weapon);
+
+player.position.set(0, 0, 0);
+scene.add(player);
+
+camera.position.set(0, 1.6, 0);
+player.add(camera);
+
+// ============ CREAR ZOMBI TERRORÍFICO ============
+function crearZombi(scale = 1, esJefe = false) {
+  const zombie = new THREE.Group();
+
+  // Color putrefacto
+  const colorCuerpo = esJefe ? 0x8a0a0a : 0x5a7a5a;
+
+  // Cuerpo deforme
+  const cuerpo = new THREE.Mesh(
+    new THREE.SphereGeometry(0.6 * scale, 12, 12),
+    new THREE.MeshStandardMaterial({
+      color: colorCuerpo,
+      roughness: 0.95,
+      metalness: 0
+    })
+  );
+  cuerpo.position.y = 0.6 * scale;
+  cuerpo.castShadow = true;
+  cuerpo.scale.y = 0.9; // Deforme
+  zombie.add(cuerpo);
+
+  // Cabeza putrefacta
+  const cabeza = new THREE.Mesh(
+    new THREE.SphereGeometry(0.4 * scale, 12, 12),
+    new THREE.MeshStandardMaterial({ color: colorCuerpo, roughness: 0.95 })
+  );
+  cabeza.position.set(0, 1.2 * scale, 0.4 * scale);
+  cabeza.castShadow = true;
+  cabeza.scale.set(1, 0.8, 1.1); // Deforme
+  zombie.add(cabeza);
+
+  // Ojos brillantes TERRORÍFICOS
+  const ojoIzq = new THREE.Mesh(
+    new THREE.SphereGeometry(0.12 * scale, 8, 8),
+    new THREE.MeshStandardMaterial({
+      color: 0xff0000,
+      emissive: 0xff0000,
+      emissiveIntensity: 0.9
+    })
+  );
+  ojoIzq.position.set(-0.15 * scale, 1.25 * scale, 0.75 * scale);
+  zombie.add(ojoIzq);
+
+  const ojoDer = ojoIzq.clone();
+  ojoDer.position.set(0.15 * scale, 1.25 * scale, 0.75 * scale);
+  zombie.add(ojoDer);
+
+  // Boca terrorífica
+  const boca = new THREE.Mesh(
+    new THREE.BoxGeometry(0.2 * scale, 0.05 * scale, 0.05 * scale),
+    new THREE.MeshStandardMaterial({ color: 0x000000 })
+  );
+  boca.position.set(0, 1.1 * scale, 0.8 * scale);
+  zombie.add(boca);
+
+  // 4 Patas deformes
+  for(let i = 0; i < 4; i++) {
+    const pata = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.08 * scale, 0.06 * scale, 0.5 * scale, 6),
+      new THREE.MeshStandardMaterial({ color: colorCuerpo, roughness: 0.95 })
+    );
+    const x = (i % 2 === 0 ? -1 : 1) * 0.3 * scale;
+    const z = (i < 2 ? 1 : -1) * 0.2 * scale;
+    pata.position.set(x, 0.25 * scale, z);
+    pata.castShadow = true;
+    zombie.add(pata);
+  }
+
+  // Cola putrefacta
+  const cola = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.05 * scale, 0.1 * scale, 0.6 * scale),
+    new THREE.MeshStandardMaterial({ color: colorCuerpo })
+  );
+  cola.rotation.x = Math.PI / 4;
+  cola.position.set(0, 0.5 * scale, -0.7 * scale);
+  zombie.add(cola);
+
+  // Jefe - Corona de HUESOS
+  if(esJefe) {
+    const coronaHueso = new THREE.Mesh(
+      new THREE.ConeGeometry(0.3 * scale, 0.5 * scale, 6),
+      new THREE.MeshStandardMaterial({
+        color: 0xccccaa,
+        roughness: 0.9
+      })
+    );
+    coronaHueso.position.set(0, 1.7 * scale, 0.4 * scale);
+    zombie.add(coronaHueso);
+
+    // Púas largas y terroríficas
+    for(let i = 0; i < 8; i++) {
+      const pua = new THREE.Mesh(
+        new THREE.ConeGeometry(0.12 * scale, 0.5 * scale, 4),
+        new THREE.MeshStandardMaterial({ color: 0x3a3a3a })
+      );
+      const angle = (i / 8) * Math.PI * 2;
+      pua.position.set(
+        Math.cos(angle) * 0.7 * scale,
+        0.6 * scale,
+        Math.sin(angle) * 0.7 * scale
+      );
+      zombie.add(pua);
+    }
+  }
+
+  // BARRAS DE VIDA
+  const barraVidaFondo = new THREE.Mesh(
+    new THREE.PlaneGeometry(1 * scale, 0.1 * scale),
+    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.7 })
+  );
+  barraVidaFondo.position.set(0, 2.2 * scale, 0);
+  barraVidaFondo.raycast = () => {}; // DESHABILITADO: No puede ser impactado
+  barraVidaFondo.userData.esBarraVida = true;
+  zombie.add(barraVidaFondo);
+
+  const barraVidaLlena = new THREE.Mesh(
+    new THREE.PlaneGeometry(1 * scale, 0.08 * scale),
+    new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+  );
+  barraVidaLlena.position.set(0, 2.2 * scale, 0.01);
+  barraVidaLlena.raycast = () => {}; // DESHABILITADO: No puede ser impactado
+  barraVidaLlena.userData.esBarraVida = true;
+  zombie.add(barraVidaLlena);
+
+  zombie.barraVida = barraVidaLlena;
+  zombie.barraVidaFondo = barraVidaFondo;
+  zombie.barraVidaWidth = 1 * scale;
+
+  zombie.vida = esJefe ? 150 + nivel * 50 : 40 * scale;
+  zombie.vidaMax = zombie.vida;
+  zombie.velocidad = 0.02 + nivel * 0.005;
+  zombie.danio = esJefe ? 15 : 10;
+
+  // MARCAR como enemigo para detección
+  zombie.userData.esEnemigo = true;
+
+  return zombie;
+}
+
+// ============ CREAR ENEMIGOS ============
+function crearEnemigos() {
+  enemigos.forEach(e => scene.remove(e));
+  if(jefe) scene.remove(jefe);
+  enemigos = [];
+
+  const numEnemigos = Math.min(nivel + 2, 12);
+  for(let i = 0; i < numEnemigos; i++) {
+    const e = crearZombi(1, false);
+    e.position.set(
+      Math.random() * 20 - 10,
+      0,
+      Math.random() * -30 - 10
+    );
+    scene.add(e);
+    enemigos.push(e);
+  }
+
+  // Jefe
+  jefe = crearZombi(1.8 + nivel * 0.15, true);
+  jefe.position.set(0, 0, -40 - nivel * 5);
+  scene.add(jefe);
+
+  actualizarHUD();
+}
+
+// ============ EFECTOS DE SONIDO TERRORÍFICOS ============
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSound(type) {
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+
+  switch(type) {
+    case 'shoot':
+      oscillator.type = 'square';
+      oscillator.frequency.value = 600;
+      gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.08);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.08);
+      break;
+    case 'hit':
+      oscillator.type = 'sawtooth';
+      oscillator.frequency.value = 180;
+      gainNode.gain.setValueAtTime(0.25, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.2);
+      break;
+    case 'death':
+      oscillator.type = 'sawtooth';
+      oscillator.frequency.value = 80;
+      gainNode.gain.setValueAtTime(0.35, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.7);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.7);
+      break;
+    case 'damage':
+      oscillator.type = 'triangle';
+      oscillator.frequency.value = 120;
+      gainNode.gain.setValueAtTime(0.25, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.25);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.25);
+      break;
+    case 'levelup':
+      oscillator.frequency.value = 523;
+      gainNode.gain.setValueAtTime(0.18, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 1);
+      break;
+    case 'explosion':
+      oscillator.type = 'sawtooth';
+      oscillator.frequency.value = 60;
+      gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.8);
+      break;
+  }
+}
+
+// ============ SISTEMA DE PARTÍCULAS MEJORADO ============
+function crearExplosion(position, color = 0xff0000, count = 20) {
+  for(let i = 0; i < count; i++) {
+    const particle = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1, 4, 4),
+      new THREE.MeshBasicMaterial({ color })
+    );
+    particle.position.copy(position);
+
+    const velocity = new THREE.Vector3(
+      Math.random() - 0.5,
+      Math.random() - 0.5,
+      Math.random() - 0.5
+    ).multiplyScalar(0.3);
+
+    particle.userData.velocity = velocity;
+    particle.userData.life = 1;
+    scene.add(particle);
+
+    const animate = () => {
+      particle.position.add(particle.userData.velocity);
+      particle.userData.velocity.y -= 0.01;
+      particle.userData.life -= 0.02;
+      particle.scale.multiplyScalar(0.95);
+
+      if(particle.userData.life > 0) {
+        requestAnimationFrame(animate);
+      } else {
+        scene.remove(particle);
+      }
+    };
+    animate();
+  }
+}
+
+// ============ SISTEMA DE BOMBAS ============
+function lanzarBomba() {
+  if(!bombaDisponible || !gameStarted || gamePaused) return;
+
+  bombaDisponible = false;
+
+  // UI
+  document.getElementById('bomb-status').textContent = 'RECARGANDO';
+  document.getElementById('bomb-cooldown-bar').style.width = '0%';
+
+  // Crear bomba
+  const bomba = new THREE.Group();
+
+  const bombaEsfera = new THREE.Mesh(
+    new THREE.SphereGeometry(0.3, 16, 16),
+    new THREE.MeshStandardMaterial({
+      color: 0x2a2a2a,
+      metalness: 0.7,
+      roughness: 0.3
+    })
+  );
+  bomba.add(bombaEsfera);
+
+  // Mecha
+  const mecha = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.05, 0.05, 0.2),
+    new THREE.MeshStandardMaterial({ color: 0x8a4a1a })
+  );
+  mecha.position.y = 0.4;
+  bomba.add(mecha);
+
+  // Chispa
+  const chispa = new THREE.PointLight(0xff6600, 1, 3);
+  chispa.position.y = 0.5;
+  bomba.add(chispa);
+
+  bomba.position.copy(player.position);
+  bomba.position.y += 1.5;
+
+  // Calcular velocidad de lanzamiento
+  const direction = new THREE.Vector3(0, 0, -1);
+  direction.applyQuaternion(camera.quaternion);
+
+  const velocity = direction.multiplyScalar(0.5);
+  velocity.y = 0.3; // Arco hacia arriba
+
+  bomba.userData.velocity = velocity;
+  bomba.userData.tiempoVida = 3; // 3 segundos antes de explotar
+
+  scene.add(bomba);
+  bombasActivas.push(bomba);
+
+  // Cooldown
+  let tiempoRecarga = 0;
+  const intervalo = setInterval(() => {
+    tiempoRecarga += 100;
+    const progreso = (tiempoRecarga / bombaCooldown) * 100;
+    document.getElementById('bomb-cooldown-bar').style.width = progreso + '%';
+
+    if(tiempoRecarga >= bombaCooldown) {
+      bombaDisponible = true;
+      document.getElementById('bomb-status').textContent = 'LISTA';
+      document.getElementById('bomb-cooldown-bar').style.width = '100%';
+      clearInterval(intervalo);
+    }
+  }, 100);
+}
+
+function actualizarBombas(deltaTime) {
+  bombasActivas.forEach((bomba, index) => {
+    if(!bomba.parent) {
+      bombasActivas.splice(index, 1);
+      return;
+    }
+
+    // Física
+    bomba.userData.velocity.y -= 0.015 * deltaTime; // Gravedad
+    bomba.position.add(bomba.userData.velocity.clone().multiplyScalar(deltaTime));
+
+    // Rotación
+    bomba.rotation.x += 0.1 * deltaTime;
+    bomba.rotation.y += 0.15 * deltaTime;
+
+    // Tiempo de vida
+    bomba.userData.tiempoVida -= 0.016 * deltaTime;
+
+    // Colisión con suelo o tiempo acabado
+    if(bomba.position.y <= 0.3 || bomba.userData.tiempoVida <= 0) {
+      // EXPLOSIÓN
+      playSound('explosion');
+
+      // Partículas masivas
+      crearExplosion(bomba.position, 0xff6600, 60);
+      crearExplosion(bomba.position, 0xffaa00, 40);
+
+      // Luz de explosión
+      const explosionLight = new THREE.PointLight(0xff6600, 5, 20);
+      explosionLight.position.copy(bomba.position);
+      scene.add(explosionLight);
+      setTimeout(() => scene.remove(explosionLight), 200);
+
+      // Sacudida de cámara
+      cameraShake = 0.3;
+
+      // Daño a enemigos en radio
+      const radioExplosion = 5;
+      [...enemigos, jefe].forEach(e => {
+        if(!e || !e.parent) return;
+
+        const dist = e.position.distanceTo(bomba.position);
+        if(dist < radioExplosion) {
+          const danio = 80 * (1 - dist / radioExplosion); // Más daño cerca
+          e.vida -= danio;
+
+          // ACTUALIZAR BARRA INMEDIATAMENTE
+          actualizarBarraVida(e);
+
+          // Efecto visual
+          crearExplosion(e.position, 0xff0000, 15);
+
+          if(e.vida <= 0) {
+            playSound('death');
+            crearExplosion(e.position, 0xff0000, 30);
+            scene.remove(e);
+
+            if(e === jefe) {
+              bajasTotal++;
+              jefe = null;
+              nivelCompletado();
+            } else {
+              enemigos = enemigos.filter(en => en !== e);
+              bajasTotal++;
+            }
+          }
+        }
+      });
+
+      scene.remove(bomba);
+      bombasActivas.splice(index, 1);
+
+      // ACTUALIZAR HUD DESPUÉS DE LA EXPLOSIÓN
+      actualizarHUD();
+    }
+  });
+}
+
+// ============ ACTUALIZAR HUD ============
+function actualizarHUD() {
+  document.getElementById('vida').textContent = Math.max(0, Math.round(vidaJugador));
+  document.getElementById('nivel').textContent = nivel;
+  document.getElementById('bajas').textContent = bajasTotal;
+  document.getElementById('enemigos-restantes').textContent = enemigos.length;
+  document.getElementById('jefe-vida').textContent = jefe ? Math.max(0, Math.round((jefe.vida / jefe.vidaMax) * 100)) : 0;
+}
+
+// ============ ACTUALIZAR BARRA DE VIDA INDIVIDUAL ============
+function actualizarBarraVida(enemigo) {
+  if(!enemigo || !enemigo.barraVida) return;
+
+  const porcentaje = Math.max(0, enemigo.vida / enemigo.vidaMax);
+
+  // Actualizar ancho de la barra
+  enemigo.barraVida.scale.x = porcentaje;
+  enemigo.barraVida.position.x = -(enemigo.barraVidaWidth - enemigo.barraVidaWidth * porcentaje) / 2;
+
+  // Color según porcentaje de vida
+  if(porcentaje > 0.6) {
+    enemigo.barraVida.material.color.setHex(0x00ff00); // Verde
+  } else if(porcentaje > 0.3) {
+    enemigo.barraVida.material.color.setHex(0xffff00); // Amarillo
+  } else {
+    enemigo.barraVida.material.color.setHex(0xff0000); // Rojo
+  }
+}
+
+// ============ CONTROLES ============
+window.addEventListener('keydown', e => {
+  keys[e.key.toLowerCase()] = true;
+
+  // Bomba con ESPACIO
+  if(e.key === ' ') {
+    e.preventDefault();
+    lanzarBomba();
+  }
+
+  if(e.key === 'Escape' && gameStarted) {
+    document.exitPointerLock();
+  }
+});
+
+window.addEventListener('keyup', e => {
+  keys[e.key.toLowerCase()] = false;
+});
+
+// Pointer Lock
+document.getElementById('click-to-start').addEventListener('click', () => {
+  document.getElementById('click-to-start').style.display = 'none';
+  renderer.domElement.requestPointerLock();
+  gameStarted = true;
+  crearEnemigos();
+});
+
+document.addEventListener('pointerlockchange', () => {
+  gamePaused = document.pointerLockElement !== renderer.domElement;
+});
+
+document.addEventListener('mousemove', (e) => {
+  if(!gamePaused && gameStarted) {
+    mouseX = e.movementX || 0;
+    mouseY = e.movementY || 0;
+
+    rotationY -= mouseX * 0.002;
+    rotationX -= mouseY * 0.002;
+
+    rotationX = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, rotationX));
+  }
+});
+
+// Disparo
+document.addEventListener('click', () => {
+  if(!gameStarted || gamePaused || !canShoot || vidaJugador <= 0) return;
+
+  canShoot = false;
+  setTimeout(() => canShoot = true, shootCooldown);
+
+  playSound('shoot');
+
+  // Fogonazo
+  const muzzleFlash = new THREE.PointLight(0xffff00, 2, 5);
+  muzzleFlash.position.copy(camera.getWorldPosition(new THREE.Vector3()));
+  scene.add(muzzleFlash);
+  setTimeout(() => scene.remove(muzzleFlash), 50);
+
+  // Raycaster SIN LÍMITE DE DISTANCIA
+  const raycaster = new THREE.Raycaster();
+  raycaster.far = Infinity; // ¡CRÍTICO! Sin límites
+
+  const direction = new THREE.Vector3(0, 0, -1);
+  direction.applyQuaternion(camera.quaternion);
+  raycaster.set(camera.getWorldPosition(new THREE.Vector3()), direction);
+
+  const objetivos = [...enemigos, jefe].filter(e => e && e.parent);
+  const hits = raycaster.intersectObjects(objetivos, true);
+
+  if(hits.length > 0) {
+    // Buscar el grupo enemigo en la jerarquía
+    let obj = hits[0].object;
+    while(obj && !obj.userData.esEnemigo) {
+      obj = obj.parent;
+    }
+
+    // Verificar que encontramos un enemigo válido
+    if(obj && obj.userData.esEnemigo && obj.vida !== undefined) {
+      obj.vida -= 20;
+      playSound('hit');
+
+      // SANGRE roja
+      crearExplosion(hits[0].point, 0xaa0000, 15);
+
+      // ACTUALIZAR BARRA INMEDIATAMENTE
+      actualizarBarraVida(obj);
+
+      // Parpadeo rojo
+      obj.traverse((child) => {
+        if(child.material && child.material.color && !child.userData.esBarraVida) {
+          const originalColor = child.material.color.clone();
+          child.material.color.setHex(0xff0000);
+          setTimeout(() => {
+            if(child.material) child.material.color.copy(originalColor);
+          }, 100);
+        }
+      });
+
+      if(obj.vida <= 0) {
+        playSound('death');
+        crearExplosion(obj.position, 0xaa0000, 40); // Explosión de sangre
+        scene.remove(obj);
+
+        if(obj === jefe) {
+          bajasTotal++;
+          jefe = null;
+          nivelCompletado();
+        } else {
+          enemigos = enemigos.filter(e => e !== obj);
+          bajasTotal++;
+        }
+      }
+
+      // ACTUALIZAR HUD DESPUÉS DE CADA DISPARO
+      actualizarHUD();
+    }
+  }
+
+  // Línea de trazado
+  const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+    camera.getWorldPosition(new THREE.Vector3()),
+    camera.getWorldPosition(new THREE.Vector3()).add(direction.multiplyScalar(1000))
+  ]);
+  const line = new THREE.Line(
+    lineGeometry,
+    new THREE.LineBasicMaterial({ color: 0xff4444, transparent: true, opacity: 0.6 })
+  );
+  scene.add(line);
+  setTimeout(() => scene.remove(line), 50);
+});
+
+// ============ NIVEL COMPLETADO ============
+function nivelCompletado() {
+  if(enemigos.length === 0 && !jefe) {
+    playSound('levelup');
+
+    document.getElementById('lc-bajas').textContent = bajasTotal;
+    document.getElementById('lc-vida').textContent = Math.round(vidaJugador);
+    document.getElementById('level-complete').style.display = 'block';
+
+    setTimeout(() => {
+      document.getElementById('level-complete').style.display = 'none';
+      nivel++;
+      vidaJugador = Math.min(100, vidaJugador + 20);
+      aplicarTema(nivel);
+      crearEnemigos();
+      actualizarHUD();
+    }, 3000);
+  }
+}
+
+// ============ GAME OVER ============
+function gameOver() {
+  document.getElementById('go-nivel').textContent = nivel;
+  document.getElementById('go-bajas').textContent = bajasTotal;
+  document.getElementById('game-over').style.display = 'block';
+  gameStarted = false;
+}
+
+// ============ LOOP PRINCIPAL ============
+let lastTime = Date.now();
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  if(gamePaused || !gameStarted || vidaJugador <= 0) {
+    renderer.render(scene, camera);
+    return;
+  }
+
+  const currentTime = Date.now();
+  const deltaTime = (currentTime - lastTime) / 16.67;
+  lastTime = currentTime;
+
+  // Movimiento del jugador
+  const moveSpeed = 0.12 * deltaTime;
+  const forward = new THREE.Vector3(0, 0, -1);
+  const right = new THREE.Vector3(1, 0, 0);
+
+  forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationY);
+  right.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationY);
+
+  if(keys['w']) player.position.add(forward.multiplyScalar(moveSpeed));
+  if(keys['s']) player.position.add(forward.multiplyScalar(-moveSpeed));
+  if(keys['a']) player.position.add(right.multiplyScalar(-moveSpeed));
+  if(keys['d']) player.position.add(right.multiplyScalar(moveSpeed));
+
+  // Aplicar rotación
+  player.rotation.y = rotationY;
+  camera.rotation.x = rotationX;
+
+  // Sacudida de cámara
+  if(cameraShake > 0) {
+    camera.position.x += (Math.random() - 0.5) * cameraShake;
+    camera.position.y += (Math.random() - 0.5) * cameraShake;
+    cameraShake *= 0.9;
+
+    if(cameraShake < 0.001) {
+      cameraShake = 0;
+      camera.position.x = 0;
+      camera.position.y = 1.6;
+    }
+  }
+
+  // Actualizar bombas
+  actualizarBombas(deltaTime);
+
+  // Movimiento de enemigos
+  [...enemigos, jefe].forEach(e => {
+    if(!e || !e.parent) return;
+
+    // Mirar al jugador
+    e.lookAt(player.position);
+
+    // Moverse hacia el jugador
+    const direction = new THREE.Vector3();
+    direction.subVectors(player.position, e.position);
+    direction.y = 0;
+    direction.normalize();
+
+    e.position.add(direction.multiplyScalar(e.velocidad * deltaTime));
+
+    // Actualizar orientación de BARRA DE VIDA (Billboard)
+    if(e.barraVida && e.barraVidaFondo) {
+      const cameraPos = camera.getWorldPosition(new THREE.Vector3());
+      e.barraVida.lookAt(cameraPos);
+      e.barraVidaFondo.lookAt(cameraPos);
+      // Escala y color se actualizan en actualizarBarraVida() al recibir daño
+    }
+
+    // Animación de cola
+    const cola = e.children.find(c => c.geometry?.type === 'CylinderGeometry' && c.position.z < 0);
+    if(cola) {
+      cola.rotation.x = Math.PI / 4 + Math.sin(Date.now() * 0.01) * 0.2;
+    }
+
+    // Colisión con jugador
+    const dist = player.position.distanceTo(e.position);
+    if(dist < 1.5) {
+      vidaJugador -= e.danio * 0.016 * deltaTime;
+
+      // Efecto de daño
+      const overlay = document.getElementById('damage-overlay');
+      overlay.classList.add('active');
+      setTimeout(() => overlay.classList.remove('active'), 300);
+
+      if(Math.random() < 0.1) playSound('damage');
+
+      actualizarHUD();
+
+      if(vidaJugador <= 0) {
+        gameOver();
+      }
+    }
+  });
+
+  renderer.render(scene, camera);
+}
+
+// ============ RESPONSIVE ============
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+animate();
+</script>
+
+</body>
+</html>
