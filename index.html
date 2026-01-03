@@ -73,6 +73,36 @@ body {
   transition: width 0.1s linear;
 }
 
+#rayosofi-indicator {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: #ff69b4;
+  background: rgba(0,0,0,0.85);
+  padding: 12px 15px;
+  border-radius: 10px;
+  font-size: 16px;
+  border: 2px solid #aa3366;
+  box-shadow: 0 0 20px rgba(255,105,180,0.3);
+  margin-top: 190px;
+}
+
+#rayosofi-cooldown {
+  width: 100px;
+  height: 8px;
+  background: #333;
+  border-radius: 4px;
+  margin-top: 5px;
+  overflow: hidden;
+}
+
+#rayosofi-cooldown-bar {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #ff1493, #ff69b4);
+  transition: width 0.1s linear;
+}
+
 #weapon-indicator {
   position: absolute;
   bottom: 60px;
@@ -169,6 +199,13 @@ body {
   z-index: 1000;
   border: 3px solid #226622;
   box-shadow: 0 0 30px rgba(68,255,68,0.3);
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.05s linear;
+}
+
+#level-complete:hover {
+  background: rgba(0,0,0,1);
 }
 
 #level-complete h1 {
@@ -297,7 +334,8 @@ body {
 
 <div id="hud-right">
   🧟 Zombis: <span id="enemigos-restantes">0</span><br>
-  👹 Jefe: <span id="jefe-vida">100</span>%
+  👹 Jefe: <span id="jefe-vida">100</span>%<br>
+  🎯 Dificultad: <span id="dificultad">1</span>
 </div>
 
 <div id="bomb-indicator">
@@ -1365,6 +1403,7 @@ function actualizarHUD() {
   document.getElementById('bajas').textContent = bajasTotal;
   document.getElementById('enemigos-restantes').textContent = enemigos.length;
   document.getElementById('jefe-vida').textContent = jefe ? Math.max(0, Math.round((jefe.vida / jefe.vidaMax) * 100)) : 0;
+  document.getElementById('dificultad').textContent = nivel;
 }
 
 // ============ ACTUALIZAR TEXTO DE VIDA INDIVIDUAL ============
@@ -1628,6 +1667,13 @@ document.getElementById('btn-restart-gameover').addEventListener('click', () => 
   location.reload();
 });
 
+// Click to dismiss level complete message
+document.getElementById('level-complete').addEventListener('click', () => {
+  const mensajeDiv = document.getElementById('level-complete');
+  mensajeDiv.style.display = 'none';
+  mensajeDiv.style.opacity = '1';
+});
+
 document.addEventListener('pointerlockchange', () => {
   gamePaused = document.pointerLockElement !== renderer.domElement;
 });
@@ -1777,11 +1823,32 @@ function nivelCompletado() {
     // CREAR PORTAL
     crearPortal();
 
+    // UPDATE MESSAGE CONTENT
     document.getElementById('lc-bajas').textContent = bajasTotal;
     document.getElementById('lc-vida').textContent = Math.round(vidaJugador);
-    document.getElementById('level-complete').style.display = 'block';
 
-    // No avanzar automáticamente, esperar a que entre al portal
+    // WAIT 1 SECOND BEFORE SHOWING
+    setTimeout(() => {
+      const mensajeDiv = document.getElementById('level-complete');
+      mensajeDiv.style.display = 'block';
+      mensajeDiv.style.opacity = '1';
+
+      // AUTO-FADE AND REMOVE AFTER 5 SECONDS
+      setTimeout(() => {
+        // Fade to transparent over 1 second
+        let opacity = 1;
+        const fadeInterval = setInterval(() => {
+          opacity -= 0.05;
+          mensajeDiv.style.opacity = opacity;
+
+          if(opacity <= 0) {
+            clearInterval(fadeInterval);
+            mensajeDiv.style.display = 'none';
+            mensajeDiv.style.opacity = '1'; // Reset for next time
+          }
+        }, 50);
+      }, 2000);
+    }, 1000);
   }
 }
 
