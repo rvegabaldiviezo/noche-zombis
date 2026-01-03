@@ -345,6 +345,13 @@ body {
   </div>
 </div>
 
+<div id="rayosofi-indicator">
+  ⚡ Rayo Sofi: <span id="rayosofi-status">LISTO</span>
+  <div id="rayosofi-cooldown">
+    <div id="rayosofi-cooldown-bar"></div>
+  </div>
+</div>
+
 <div id="weapon-indicator">
   🔫 Arma: <span id="arma-actual">PISTOLA</span><br>
   <span style="font-size: 12px; opacity: 0.7;">1-Pistola | 2-Granada | 3-Cuchillo | 4-Rayo Sofi | Q-Cambiar</span>
@@ -414,11 +421,16 @@ let bombaDisponible = true;
 let bombaCooldown = 6000;
 let bombasActivas = [];
 
+// Sistema Rayo Sofi
+let rayoSofiDisponible = true;
+let rayoSofiCooldown = 5000;
+let rayoSofiTiempo = 0;
+
 // Sistema de armas
 let armaActual = 'pistola'; // 'pistola', 'granada', 'cuchillo', 'rayosofi'
 const armas = {
   pistola: { danio: 20, cooldown: 200, alcance: 1000 },
-  granada: { danio: 80, cooldown: 6000, alcance: 20 },
+  granada: { danio: 80, cooldown: 6000, alcance: 50 },
   cuchillo: { danio: 50, cooldown: 500, alcance: 2 },
   rayosofi: { danio: 150, cooldown: 5000, alcance: 1000 }
 };
@@ -1147,7 +1159,21 @@ function lanzarGranada() {
 }
 
 function dispararRayoSofi() {
-  if(!canShoot || !gameStarted || gamePaused) return;
+ if(!rayoSofiDisponible || !gameStarted || gamePaused) return;
+
+  rayoSofiDisponible = false;
+  rayoSofiTiempo = 0;
+
+  // UI
+  document.getElementById('rayosofi-status').textContent = 'RECARGANDO';
+  document.getElementById('rayosofi-cooldown-bar').style.width = '0%';
+
+  setTimeout(() => {
+    rayoSofiDisponible = true;
+    document.getElementById('rayosofi-status').textContent = 'LISTO';
+    document.getElementById('rayosofi-cooldown-bar').style.width = '100%';
+  }, rayoSofiCooldown);
+
 
   const armaConfig = armas.rayosofi;
 
@@ -1866,14 +1892,20 @@ let lastTime = Date.now();
 function animate() {
   requestAnimationFrame(animate);
 
+  const currentTime = Date.now();
+  const deltaTime = (currentTime - lastTime) / 16.67;
+  lastTime = currentTime;
+
   if(gamePaused || !gameStarted || vidaJugador <= 0) {
+      if(!rayoSofiDisponible) {
+    rayoSofiTiempo += deltaTime * 16.67;
+    const porcentaje = Math.min(100, (rayoSofiTiempo / rayoSofiCooldown) * 100);
+    document.getElementById('rayosofi-cooldown-bar').style.width = porcentaje + '%';
+  }
     renderer.render(scene, camera);
     return;
   }
 
-  const currentTime = Date.now();
-  const deltaTime = (currentTime - lastTime) / 16.67;
-  lastTime = currentTime;
 
   // Movimiento del jugador
   const moveSpeed = 0.12 * deltaTime;
