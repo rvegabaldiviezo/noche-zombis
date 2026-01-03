@@ -347,6 +347,7 @@ body {
   pointer-events: auto;
   bottom: 30px;
   left: 30px;
+  z-index: 502;  /* Encima del área táctil (501) para que funcione el joystick */
 }
 
 .joystick-base {
@@ -687,7 +688,16 @@ let rotationX = 0;
 // Variables para controles móviles
 let isMobile = false;
 let joystickMove = { x: 0, y: 0, active: false };
-let lookTouch = { active: false, lastX: 0, lastY: 0, touchId: null };
+let lookTouch = {
+  active: false,
+  lastX: 0,
+  lastY: 0,
+  touchId: null,
+  startX: 0,        // Posición inicial X para detectar tap vs drag
+  startY: 0,        // Posición inicial Y para detectar tap vs drag
+  startTime: 0,     // Timestamp inicial para detectar tap rápido
+  hasMoved: false   // Flag que indica si hubo movimiento (drag)
+};
 
 // Detectar si es móvil
 function detectarMovil() {
@@ -1931,6 +1941,10 @@ function inicializarControlesMobiles() {
     lookTouch.touchId = touch.identifier;
     lookTouch.lastX = touch.clientX;
     lookTouch.lastY = touch.clientY;
+    lookTouch.startX = touch.clientX;      // Guardar posición inicial
+    lookTouch.startY = touch.clientY;      // Guardar posición inicial
+    lookTouch.startTime = Date.now();      // Guardar timestamp
+    lookTouch.hasMoved = false;            // Resetear flag de movimiento
   });
 
   lookArea.addEventListener('touchmove', (e) => {
@@ -1941,15 +1955,25 @@ function inicializarControlesMobiles() {
         const deltaX = touch.clientX - lookTouch.lastX;
         const deltaY = touch.clientY - lookTouch.lastY;
 
-        // Aplicar rotación directamente (sensibilidad ajustada)
-        rotationY -= deltaX * 0.003;
-        rotationX -= deltaY * 0.003;
+        // Calcular distancia total desde el inicio
+        const totalDeltaX = touch.clientX - lookTouch.startX;
+        const totalDeltaY = touch.clientY - lookTouch.startY;
+        const totalDistance = Math.sqrt(totalDeltaX * totalDeltaX + totalDeltaY * totalDeltaY);
 
-        // Limitar rotación vertical
-        rotationX = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, rotationX));
+        // Si se movió más de 10px, es drag (no es tap)
+        if(totalDistance > 10) {
+          lookTouch.hasMoved = true;
 
-        lookTouch.lastX = touch.clientX;
-        lookTouch.lastY = touch.clientY;
+          // Aplicar rotación directamente (sensibilidad ajustada)
+          rotationY -= deltaX * 0.003;
+          rotationX -= deltaY * 0.003;
+
+          // Limitar rotación vertical
+          rotationX = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, rotationX));
+
+          lookTouch.lastX = touch.clientX;
+          lookTouch.lastY = touch.clientY;
+        }
         break;
       }
     }
@@ -1958,8 +1982,27 @@ function inicializarControlesMobiles() {
   lookArea.addEventListener('touchend', (e) => {
     for(let touch of e.changedTouches) {
       if(touch.identifier === lookTouch.touchId) {
+        // DETECTAR TAP SIMPLE (sin movimiento significativo)
+        const touchDuration = Date.now() - lookTouch.startTime;
+        const isTap = !lookTouch.hasMoved && touchDuration < 300;
+
+        if(isTap) {
+          // DISPARAR cuando se hace tap simple en la pantalla
+          if(gameStarted && !gamePaused && canShoot && vidaJugador > 0) {
+            if(armaActual === 'granada') {
+              lanzarGranada();
+            } else if(armaActual === 'rayosofi') {
+              dispararRayoSofi();
+            } else {
+              dispararArma();
+            }
+          }
+        }
+
+        // Resetear estado
         lookTouch.active = false;
         lookTouch.touchId = null;
+        lookTouch.hasMoved = false;
         break;
       }
     }
