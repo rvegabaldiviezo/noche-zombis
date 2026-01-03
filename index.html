@@ -322,6 +322,142 @@ body {
   box-shadow: 0 0 15px rgba(255,68,68,0.6);
   transform: scale(1.05);
 }
+
+/* CONTROLES MÓVILES */
+#mobile-controls {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 500;
+  display: none;
+}
+
+#mobile-controls.active {
+  display: block;
+}
+
+.joystick-container {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  pointer-events: auto;
+}
+
+#joystick-move {
+  bottom: 20px;
+  left: 20px;
+}
+
+#joystick-look {
+  bottom: 20px;
+  right: 20px;
+}
+
+.joystick-base {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.5);
+  border: 3px solid rgba(255,68,68,0.6);
+  position: relative;
+  box-shadow: 0 0 20px rgba(255,0,0,0.3);
+}
+
+.joystick-stick {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(255,68,68,0.8);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 15px rgba(255,0,0,0.5);
+  border: 2px solid #ff0000;
+}
+
+#mobile-buttons {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  pointer-events: auto;
+}
+
+.mobile-btn {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.7);
+  border: 3px solid rgba(255,68,68,0.8);
+  color: #ff4444;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px rgba(255,0,0,0.4);
+  cursor: pointer;
+  user-select: none;
+  font-weight: bold;
+  transition: all 0.1s;
+}
+
+.mobile-btn:active {
+  background: rgba(255,68,68,0.3);
+  transform: scale(0.95);
+  box-shadow: 0 0 30px rgba(255,0,0,0.8);
+}
+
+.mobile-btn.weapon-btn {
+  width: 60px;
+  height: 60px;
+  font-size: 20px;
+  border-color: rgba(68,255,68,0.6);
+  color: #44ff44;
+}
+
+#weapon-selector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  max-width: 140px;
+}
+
+@media (max-width: 768px) {
+  #instructions {
+    font-size: 10px;
+    padding: 8px 12px;
+    bottom: 5px;
+  }
+  
+  #hud, #hud-right {
+    font-size: 12px;
+    padding: 8px;
+    min-width: 140px;
+    max-width: 140px;
+  }
+  
+  #weapon-indicator {
+    font-size: 11px;
+    padding: 6px 10px;
+    bottom: 155px;
+    left: 5px;
+  }
+  
+  #weapon-indicator span {
+    font-size: 9px !important;
+  }
+  
+  #bomb-indicator, #rayosofi-indicator {
+    display: none;
+  }
+}
 </style>
 </head>
 <body>
@@ -402,6 +538,34 @@ body {
   <button id="btn-reiniciar-juego">🏠 Reiniciar Juego</button>
 </div>
 
+  <!-- CONTROLES MÓVILES -->
+  <div id="mobile-controls">
+    <!-- Joystick de movimiento -->
+    <div id="joystick-move" class="joystick-container">
+      <div class="joystick-base">
+        <div class="joystick-stick" id="stick-move"></div>
+      </div>
+    </div>
+    
+    <!-- Joystick de mirar -->
+    <div id="joystick-look" class="joystick-container">
+      <div class="joystick-base">
+        <div class="joystick-stick" id="stick-look"></div>
+      </div>
+    </div>
+    
+    <!-- Botones de acción -->
+    <div id="mobile-buttons">
+      <div class="mobile-btn" id="btn-shoot">🔫</div>
+      <div class="mobile-btn" id="btn-bomb">💣</div>
+      <div id="weapon-selector">
+        <div class="mobile-btn weapon-btn" data-weapon="pistola">1</div>
+        <div class="mobile-btn weapon-btn" data-weapon="granada">2</div>
+        <div class="mobile-btn weapon-btn" data-weapon="cuchillo">3</div>
+        <div class="mobile-btn weapon-btn" data-weapon="rayosofi">4</div>
+      </div>
+    </div>
+  </div>
 <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
 
 <script>
@@ -447,6 +611,17 @@ let mouseX = 0;
 let mouseY = 0;
 let rotationY = 0;
 let rotationX = 0;
+
+// Variables para controles móviles
+let isMobile = false;
+let joystickMove = { x: 0, y: 0, active: false };
+let joystickLook = { x: 0, y: 0, active: false };
+
+// Detectar si es móvil
+function detectarMovil() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+    || window.innerWidth <= 768;
+}
 
 // Sacudida de cámara
 let cameraShake = 0;
@@ -1617,6 +1792,241 @@ function crearItemsVida() {
   }
 }
 
+// ============ CONTROLES MÓVILES - JOYSTICKS ============
+function inicializarControlesMobiles() {
+  isMobile = detectarMovil();
+  
+  if(isMobile) {
+    document.getElementById('mobile-controls').classList.add('active');
+    document.getElementById('instructions').innerHTML = 
+      '🎮 Joysticks para mover y mirar | 🔫 Botón disparar | 💣 Botón bomba';
+  }
+  
+  // Joystick de movimiento
+  const moveContainer = document.getElementById('joystick-move');
+  const moveStick = document.getElementById('stick-move');
+  
+  let moveTouchId = null;
+  
+  moveContainer.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    moveTouchId = touch.identifier;
+    joystickMove.active = true;
+    actualizarJoystick(touch, moveContainer, moveStick, joystickMove);
+  });
+  
+  moveContainer.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    for(let touch of e.changedTouches) {
+      if(touch.identifier === moveTouchId) {
+        actualizarJoystick(touch, moveContainer, moveStick, joystickMove);
+        break;
+      }
+    }
+  });
+  
+  moveContainer.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    for(let touch of e.changedTouches) {
+      if(touch.identifier === moveTouchId) {
+        joystickMove.active = false;
+        joystickMove.x = 0;
+        joystickMove.y = 0;
+        moveStick.style.transform = 'translate(-50%, -50%)';
+        moveTouchId = null;
+        break;
+      }
+    }
+  });
+  
+  // Joystick de mirar
+  const lookContainer = document.getElementById('joystick-look');
+  const lookStick = document.getElementById('stick-look');
+  
+  let lookTouchId = null;
+  
+  lookContainer.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    lookTouchId = touch.identifier;
+    joystickLook.active = true;
+    actualizarJoystick(touch, lookContainer, lookStick, joystickLook);
+  });
+  
+  lookContainer.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    for(let touch of e.changedTouches) {
+      if(touch.identifier === lookTouchId) {
+        actualizarJoystick(touch, lookContainer, lookStick, joystickLook);
+        break;
+      }
+    }
+  });
+  
+  lookContainer.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    for(let touch of e.changedTouches) {
+      if(touch.identifier === lookTouchId) {
+        joystickLook.active = false;
+        joystickLook.x = 0;
+        joystickLook.y = 0;
+        lookStick.style.transform = 'translate(-50%, -50%)';
+        lookTouchId = null;
+        break;
+      }
+    }
+  });
+  
+  // Botón de disparo
+  document.getElementById('btn-shoot').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if(!gameStarted || gamePaused || !canShoot || vidaJugador <= 0) return;
+    
+    if(armaActual === 'granada') {
+      lanzarGranada();
+    } else if(armaActual === 'rayosofi') {
+      dispararRayoSofi();
+    } else {
+      dispararArma();
+    }
+  });
+  
+  // Botón de bomba
+  document.getElementById('btn-bomb').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    lanzarBomba();
+  });
+  
+  // Botones de cambio de arma
+  document.querySelectorAll('.weapon-btn').forEach(btn => {
+    btn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const arma = btn.getAttribute('data-weapon');
+      cambiarArma(arma);
+    });
+  });
+}
+
+function actualizarJoystick(touch, container, stick, joystick) {
+  const rect = container.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  
+  let deltaX = touch.clientX - centerX;
+  let deltaY = touch.clientY - centerY;
+  
+  const maxDistance = 35;
+  const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+  
+  if(distance > maxDistance) {
+    deltaX = (deltaX / distance) * maxDistance;
+    deltaY = (deltaY / distance) * maxDistance;
+  }
+  
+  joystick.x = deltaX / maxDistance;
+  joystick.y = deltaY / maxDistance;
+  
+  stick.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
+}
+
+// Extraer lógica de disparo a función separada
+function dispararArma() {
+  const armaConfig = armas[armaActual];
+
+  canShoot = false;
+  setTimeout(() => canShoot = true, armaConfig.cooldown);
+
+  if(armaActual === 'pistola') {
+    playSound('shoot');
+  } else if(armaActual === 'cuchillo') {
+    playSound('knife');
+  }
+
+  if(armaActual === 'pistola') {
+    const muzzleFlash = new THREE.PointLight(0xffff00, 2, 5);
+    muzzleFlash.position.copy(camera.getWorldPosition(new THREE.Vector3()));
+    scene.add(muzzleFlash);
+    setTimeout(() => scene.remove(muzzleFlash), 50);
+  }
+
+  const raycaster = new THREE.Raycaster();
+  raycaster.far = armaConfig.alcance;
+  raycaster.layers.set(0);
+
+  const direction = new THREE.Vector3(0, 0, -1);
+  direction.applyQuaternion(camera.getWorldQuaternion(new THREE.Quaternion()));
+  raycaster.set(camera.getWorldPosition(new THREE.Vector3()), direction);
+
+  const objetivos = [...enemigos, ...(jefe ? [jefe] : [])];
+  const hits = raycaster.intersectObjects(objetivos, true)
+    .filter(hit => !hit.object.userData.esTextoVida);
+
+  if(hits.length > 0) {
+    let obj = hits[0].object;
+    let maxIteraciones = 10;
+
+    while(obj && obj.parent && !obj.userData.esEnemigo && maxIteraciones > 0) {
+      obj = obj.parent;
+      maxIteraciones--;
+    }
+
+    if(obj && obj.userData && obj.userData.esEnemigo) {
+      if(typeof obj.vida !== 'number') {
+        console.warn('ENEMIGO SIN VIDA VÁLIDA:', obj, obj.vida);
+        return;
+      }
+
+      obj.vida -= armaConfig.danio;
+      playSound('hit');
+
+      crearExplosion(hits[0].point, 0xaa0000, 15);
+      mostrarDanio(hits[0].point, armaConfig.danio);
+      actualizarBarraVida(obj);
+
+      obj.traverse((child) => {
+        if(child.material && child.material.color && !child.userData.esTextoVida) {
+          const originalColor = child.material.color.clone();
+          child.material.color.setHex(0xff0000);
+          setTimeout(() => {
+            if(child.material) child.material.color.copy(originalColor);
+          }, 100);
+        }
+      });
+
+      if(obj.vida <= 0) {
+        playSound('death');
+        crearExplosion(obj.position, 0xaa0000, 40);
+        scene.remove(obj);
+
+        if(obj === jefe) {
+          bajasTotal++;
+          jefe = null;
+          nivelCompletado();
+        } else {
+          enemigos = enemigos.filter(e => e !== obj);
+          bajasTotal++;
+        }
+      }
+
+      actualizarHUD();
+    }
+  }
+
+  if(armaActual === 'pistola') {
+    const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+      camera.getWorldPosition(new THREE.Vector3()),
+      camera.getWorldPosition(new THREE.Vector3()).add(direction.clone().multiplyScalar(1000))
+    ]);
+    const line = new THREE.Line(
+      lineGeometry,
+      new THREE.LineBasicMaterial({ color: 0xff4444, transparent: true, opacity: 0.6 })
+    );
+    scene.add(line);
+    setTimeout(() => scene.remove(line), 50);
+  }
+}
+
 // ============ CONTROLES ============
 window.addEventListener('keydown', e => {
   keys[e.key.toLowerCase()] = true;
@@ -1654,8 +2064,17 @@ window.addEventListener('keyup', e => {
 document.getElementById('click-to-start').addEventListener('click', () => {
   document.getElementById('click-to-start').style.display = 'none';
   document.getElementById('menu-control').style.display = 'block';
-  renderer.domElement.requestPointerLock();
+  
+  isMobile = detectarMovil();
+  
+  if(!isMobile) {
+    renderer.domElement.requestPointerLock();
+  }
+  
   gameStarted = true;
+
+  // Inicializar controles móviles
+  inicializarControlesMobiles();
 
   // Inicializar arma pistola
   cambiarArma('pistola');
@@ -1718,7 +2137,7 @@ document.addEventListener('mousemove', (e) => {
 
 // Disparo
 document.addEventListener('click', () => {
-  if(!gameStarted || gamePaused || !canShoot || vidaJugador <= 0) return;
+  if(!gameStarted || gamePaused || !canShoot || vidaJugador <= 0 || isMobile) return;
 
   // Granada se lanza como proyectil
   if(armaActual === 'granada') {
@@ -1732,113 +2151,7 @@ document.addEventListener('click', () => {
     return;
   }
 
-  const armaConfig = armas[armaActual];
-
-  // Cooldown según arma
-  canShoot = false;
-  setTimeout(() => canShoot = true, armaConfig.cooldown);
-
-  // Sonido según arma
-  if(armaActual === 'pistola') {
-    playSound('shoot');
-  } else if(armaActual === 'cuchillo') {
-    playSound('knife');
-  }
-
-  // Fogonazo (solo pistola)
-  if(armaActual === 'pistola') {
-    const muzzleFlash = new THREE.PointLight(0xffff00, 2, 5);
-    muzzleFlash.position.copy(camera.getWorldPosition(new THREE.Vector3()));
-    scene.add(muzzleFlash);
-    setTimeout(() => scene.remove(muzzleFlash), 50);
-  }
-
-  // Raycaster con alcance según arma
-  const raycaster = new THREE.Raycaster();
-  raycaster.far = armaConfig.alcance;
-  raycaster.layers.set(0);  // Solo detectar layer 0 (enemigos), ignorar layer 1 (sprites)
-
-  const direction = new THREE.Vector3(0, 0, -1);
-  direction.applyQuaternion(camera.getWorldQuaternion(new THREE.Quaternion()));
-  raycaster.set(camera.getWorldPosition(new THREE.Vector3()), direction);
-
-  const objetivos = [...enemigos, ...(jefe ? [jefe] : [])];
-  const hits = raycaster.intersectObjects(objetivos, true)
-    .filter(hit => !hit.object.userData.esTextoVida);
-
-  if(hits.length > 0) {
-    // Buscar el grupo enemigo en la jerarquía de forma robusta
-    let obj = hits[0].object;
-    let maxIteraciones = 10;
-
-    while(obj && obj.parent && !obj.userData.esEnemigo && maxIteraciones > 0) {
-      obj = obj.parent;
-      maxIteraciones--;
-    }
-
-    // Verificar que encontramos un enemigo válido con doble validación
-    if(obj && obj.userData && obj.userData.esEnemigo) {
-      if(typeof obj.vida !== 'number') {
-        console.warn('ENEMIGO SIN VIDA VÁLIDA:', obj, obj.vida);
-        return;
-      }
-
-      obj.vida -= armaConfig.danio;
-      playSound('hit');
-
-      // SANGRE roja
-      crearExplosion(hits[0].point, 0xaa0000, 15);
-
-      // MOSTRAR DAÑO FLOTANTE
-      mostrarDanio(hits[0].point, armaConfig.danio);
-
-      // ACTUALIZAR BARRA INMEDIATAMENTE
-      actualizarBarraVida(obj);
-
-      // Parpadeo rojo
-      obj.traverse((child) => {
-        if(child.material && child.material.color && !child.userData.esTextoVida) {
-          const originalColor = child.material.color.clone();
-          child.material.color.setHex(0xff0000);
-          setTimeout(() => {
-            if(child.material) child.material.color.copy(originalColor);
-          }, 100);
-        }
-      });
-
-      if(obj.vida <= 0) {
-        playSound('death');
-        crearExplosion(obj.position, 0xaa0000, 40); // Explosión de sangre
-        scene.remove(obj);
-
-        if(obj === jefe) {
-          bajasTotal++;
-          jefe = null;
-          nivelCompletado();
-        } else {
-          enemigos = enemigos.filter(e => e !== obj);
-          bajasTotal++;
-        }
-      }
-
-      // ACTUALIZAR HUD DESPUÉS DE CADA DISPARO
-      actualizarHUD();
-    }
-  }
-
-  // Línea de trazado (solo pistola)
-  if(armaActual === 'pistola') {
-    const lineGeometry = new THREE.BufferGeometry().setFromPoints([
-      camera.getWorldPosition(new THREE.Vector3()),
-      camera.getWorldPosition(new THREE.Vector3()).add(direction.clone().multiplyScalar(1000))
-    ]);
-    const line = new THREE.Line(
-      lineGeometry,
-      new THREE.LineBasicMaterial({ color: 0xff4444, transparent: true, opacity: 0.6 })
-    );
-    scene.add(line);
-    setTimeout(() => scene.remove(line), 50);
-  }
+  dispararArma();
 });
 
 // ============ NIVEL COMPLETADO ============
@@ -1915,14 +2228,30 @@ function animate() {
   forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationY);
   right.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationY);
 
-  if(keys['w']) player.position.add(forward.multiplyScalar(moveSpeed));
-  if(keys['s']) player.position.add(forward.multiplyScalar(-moveSpeed));
-  if(keys['a']) player.position.add(right.multiplyScalar(-moveSpeed));
-  if(keys['d']) player.position.add(right.multiplyScalar(moveSpeed));
+  // Control por teclado o joystick
+  if(isMobile && joystickMove.active) {
+    // Movimiento con joystick
+    player.position.add(forward.clone().multiplyScalar(-joystickMove.y * moveSpeed));
+    player.position.add(right.clone().multiplyScalar(joystickMove.x * moveSpeed));
+  } else {
+    // Movimiento con teclado
+    if(keys['w']) player.position.add(forward.multiplyScalar(moveSpeed));
+    if(keys['s']) player.position.add(forward.multiplyScalar(-moveSpeed));
+    if(keys['a']) player.position.add(right.multiplyScalar(-moveSpeed));
+    if(keys['d']) player.position.add(right.multiplyScalar(moveSpeed));
+  }
+
+  // Rotación con joystick o mouse
+  if(isMobile && joystickLook.active) {
+    rotationY -= joystickLook.x * 0.05 * deltaTime;
+    rotationX -= joystickLook.y * 0.05 * deltaTime;
+    rotationX = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, rotationX));
+  }
 
   // Aplicar rotación
   player.rotation.y = rotationY;
   camera.rotation.x = rotationX;
+
 
   // Sacudida de cámara
   if(cameraShake > 0) {
