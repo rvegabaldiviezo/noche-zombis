@@ -11,15 +11,21 @@ Juego de supervivencia en 3D con gráficos terroríficos y mecánicas de FPS.
 - **WASD** - Moverse
 - **Mouse** - Apuntar
 - **Click** - Disparar
-- **ESPACIO** - Lanzar bomba (cooldown 6 seg)
+- **1** - Pistola (20 daño, alcance infinito)
+- **2** - Granada (80 daño, alcance 20m)
+- **3** - Cuchillo (50 daño, alcance 2m)
+- **Q** - Cambiar arma (ciclo)
+- **ESPACIO** - Lanzar bomba cuando tienes granada equipada (cooldown 6 seg)
 - **ESC** - Salir del modo pointer lock
 
 ## Características
 
 ✅ Controles FPS completos con mouse look
-✅ Sistema de disparos con raycasting infinito
+✅ Sistema de disparos con raycasting preciso
+✅ Sistema de armas balanceado (Pistola/Granada/Cuchillo)
 ✅ Bombas con física realista y explosiones de área
-✅ Barras de vida dinámicas sobre enemigos
+✅ Sistema de salud con porcentaje visible (verde ≥50%, rojo <50%)
+✅ Indicadores visuales de daño con números flotantes
 ✅ 5 niveles temáticos terroríficos
 ✅ Efectos de sangre y partículas
 ✅ Sonidos generados proceduralmente
@@ -44,6 +50,3 @@ Juego de supervivencia en 3D con gráficos terroríficos y mecánicas de FPS.
 
 Ambiente terrorífico con zombis putrefactos, barras de vida dinámicas y efectos de sangre al impactar.
 
----
-
-Desarrollado con ❤️ por Rodrigo Vega

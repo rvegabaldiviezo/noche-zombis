@@ -22,6 +22,7 @@ body {
   border-radius: 10px;
   font-size: 16px;
   min-width: 220px;
+  max-width: 220px;
   backdrop-filter: blur(5px);
   border: 2px solid #660000;
   box-shadow: 0 0 20px rgba(255,0,0,0.3);
@@ -44,8 +45,8 @@ body {
 
 #bomb-indicator {
   position: absolute;
-  top: 80px;
-  left: 10px;
+  top: 10px;
+  right: 10px;
   color: #ffaa00;
   background: rgba(0,0,0,0.85);
   padding: 12px 15px;
@@ -53,6 +54,7 @@ body {
   font-size: 16px;
   border: 2px solid #664400;
   box-shadow: 0 0 20px rgba(255,170,0,0.3);
+  margin-top: 110px;
 }
 
 #bomb-cooldown {
@@ -69,6 +71,19 @@ body {
   height: 100%;
   background: linear-gradient(90deg, #ff6600, #ffaa00);
   transition: width 0.1s linear;
+}
+
+#weapon-indicator {
+  position: absolute;
+  bottom: 60px;
+  left: 10px;
+  color: #44ff44;
+  background: rgba(0,0,0,0.85);
+  padding: 10px 15px;
+  border-radius: 10px;
+  font-size: 14px;
+  border: 2px solid #226622;
+  box-shadow: 0 0 20px rgba(68,255,68,0.3);
 }
 
 #instructions {
@@ -217,6 +232,59 @@ body {
 #click-to-start p {
   color: #ff8888;
 }
+
+#menu-control {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(0,0,0,0.85);
+  padding: 10px 15px;
+  border-radius: 10px;
+  border: 2px solid #660000;
+  display: none;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 0 20px rgba(255,0,0,0.3);
+  z-index: 999;
+}
+
+#menu-control button {
+  background: #660000;
+  color: #ff4444;
+  border: none;
+  padding: 8px 15px;
+  margin: 5px 0;
+  border-radius: 5px;
+  cursor: pointer;
+  width: 100%;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+#menu-control button:hover {
+  background: #880000;
+  box-shadow: 0 0 10px rgba(255,68,68,0.5);
+  transform: scale(1.05);
+}
+
+#game-over button, #level-complete button {
+  background: #660000;
+  color: #ff4444;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: bold;
+  margin-top: 20px;
+  transition: all 0.2s;
+}
+
+#game-over button:hover, #level-complete button:hover {
+  background: #880000;
+  box-shadow: 0 0 15px rgba(255,68,68,0.6);
+  transform: scale(1.05);
+}
 </style>
 </head>
 <body>
@@ -239,8 +307,14 @@ body {
   </div>
 </div>
 
+<div id="weapon-indicator">
+  🔫 Arma: <span id="arma-actual">PISTOLA</span><br>
+  <span style="font-size: 12px; opacity: 0.7;">1-Pistola | 2-Granada | 3-Cuchillo | Q-Cambiar</span>
+</div>
+
 <div id="instructions">
-  🎮 WASD mover | 🖱 Mouse apuntar | 🔫 Click disparar | 💣 ESPACIO bomba | ESC salir
+  🎮 WASD mover | 🖱 Mouse apuntar | 🔫 Click disparar<br>
+  💣 ESPACIO granada | 🔪 1-Pistola 2-Granada 3-Cuchillo | Q-Cambiar arma | ESC salir
 </div>
 
 <div id="crosshair">
@@ -262,13 +336,18 @@ body {
   <h1>☠️ HAS MUERTO</h1>
   <p>Ola alcanzada: <span id="go-nivel">0</span></p>
   <p>Bajas totales: <span id="go-bajas">0</span></p>
-  <p><em>Presiona F5 para reintentar</em></p>
+  <button id="btn-restart-gameover">🔄 Reintentar</button>
 </div>
 
 <div id="click-to-start">
   <h1>🦇 NOCHE DE LOS MUERTOS 🦇</h1>
   <p style="font-size: 22px; margin: 20px 0;">¡Sobrevive a las olas de zombis!</p>
   <p style="font-size: 16px; opacity: 0.8;">Haz click para comenzar la pesadilla</p>
+</div>
+
+<div id="menu-control">
+  <button id="btn-reiniciar-nivel">🔄 Reiniciar Nivel</button>
+  <button id="btn-reiniciar-juego">🏠 Reiniciar Juego</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
@@ -289,6 +368,20 @@ let shootCooldown = 200;
 let bombaDisponible = true;
 let bombaCooldown = 6000;
 let bombasActivas = [];
+
+// Sistema de armas
+let armaActual = 'pistola'; // 'pistola', 'granada', 'cuchillo'
+const armas = {
+  pistola: { danio: 20, cooldown: 200, alcance: Infinity },
+  granada: { danio: 80, cooldown: 6000, alcance: 20 },
+  cuchillo: { danio: 50, cooldown: 500, alcance: 2 }
+};
+
+// Portal de nivel
+let portal = null;
+
+// Sistema de items de vida
+let itemsVida = [];
 
 // Controles
 const keys = {};
@@ -460,24 +553,7 @@ earRight.position.set(0.3, 1.2, 0);
 earRight.rotation.z = Math.PI / 6;
 player.add(earRight);
 
-// Arma
-const weapon = new THREE.Group();
-const gunBarrel = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.05, 0.05, 0.8, 8),
-  new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.8 })
-);
-gunBarrel.rotation.z = Math.PI / 2;
-gunBarrel.position.set(0.4, 0, 0.5);
-weapon.add(gunBarrel);
-
-const gunHandle = new THREE.Mesh(
-  new THREE.BoxGeometry(0.1, 0.3, 0.15),
-  new THREE.MeshStandardMaterial({ color: 0x3a2a1a })
-);
-gunHandle.position.set(0, 0, 0.5);
-weapon.add(gunHandle);
-
-player.add(weapon);
+// El arma se agrega dinámicamente con cambiarArma()
 
 player.position.set(0, 0, 0);
 scene.add(player);
@@ -590,29 +666,6 @@ function crearZombi(scale = 1, esJefe = false) {
     }
   }
 
-  // BARRAS DE VIDA
-  const barraVidaFondo = new THREE.Mesh(
-    new THREE.PlaneGeometry(1 * scale, 0.1 * scale),
-    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.7 })
-  );
-  barraVidaFondo.position.set(0, 2.2 * scale, 0);
-  barraVidaFondo.raycast = () => {}; // DESHABILITADO: No puede ser impactado
-  barraVidaFondo.userData.esBarraVida = true;
-  zombie.add(barraVidaFondo);
-
-  const barraVidaLlena = new THREE.Mesh(
-    new THREE.PlaneGeometry(1 * scale, 0.08 * scale),
-    new THREE.MeshBasicMaterial({ color: 0x00ff00 })
-  );
-  barraVidaLlena.position.set(0, 2.2 * scale, 0.01);
-  barraVidaLlena.raycast = () => {}; // DESHABILITADO: No puede ser impactado
-  barraVidaLlena.userData.esBarraVida = true;
-  zombie.add(barraVidaLlena);
-
-  zombie.barraVida = barraVidaLlena;
-  zombie.barraVidaFondo = barraVidaFondo;
-  zombie.barraVidaWidth = 1 * scale;
-
   zombie.vida = esJefe ? 150 + nivel * 50 : 40 * scale;
   zombie.vidaMax = zombie.vida;
   zombie.velocidad = 0.02 + nivel * 0.005;
@@ -621,7 +674,111 @@ function crearZombi(scale = 1, esJefe = false) {
   // MARCAR como enemigo para detección
   zombie.userData.esEnemigo = true;
 
+  // Inicializar texto de vida
+  actualizarBarraVida(zombie);
+
   return zombie;
+}
+
+// ============ CREAR BRAZO CON ARMA VISIBLE ============
+function crearBrazoConArma(tipoArma) {
+  const brazo = new THREE.Group();
+
+  // Brazo
+  const antebrazo = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.08, 0.06, 0.8),
+    new THREE.MeshStandardMaterial({ color: 0xd4a574 })
+  );
+  antebrazo.rotation.z = Math.PI / 6;
+  antebrazo.position.set(0.4, -0.3, 0.5);
+  brazo.add(antebrazo);
+
+  // Mano
+  const mano = new THREE.Mesh(
+    new THREE.SphereGeometry(0.1),
+    new THREE.MeshStandardMaterial({ color: 0xd4a574 })
+  );
+  mano.position.set(0.4, -0.6, 0.7);
+  brazo.add(mano);
+
+  // Arma según tipo
+  let armaModel;
+  if(tipoArma === 'pistola') {
+    armaModel = new THREE.Group();
+
+    const canon = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.04, 0.04, 0.6),
+      new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.9 })
+    );
+    canon.rotation.z = Math.PI / 2;
+    armaModel.add(canon);
+
+    const empunadura = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.25, 0.12),
+      new THREE.MeshStandardMaterial({ color: 0x3a2a1a })
+    );
+    empunadura.position.y = -0.15;
+    armaModel.add(empunadura);
+
+    armaModel.position.set(0.4, -0.5, 0.8);
+    armaModel.rotation.set(0, 0, -Math.PI / 12);
+
+  } else if(tipoArma === 'granada') {
+    armaModel = new THREE.Mesh(
+      new THREE.SphereGeometry(0.12),
+      new THREE.MeshStandardMaterial({
+        color: 0x2a4a2a,
+        roughness: 0.8
+      })
+    );
+    armaModel.position.set(0.35, -0.55, 0.75);
+
+  } else if(tipoArma === 'cuchillo') {
+    armaModel = new THREE.Group();
+
+    const hoja = new THREE.Mesh(
+      new THREE.BoxGeometry(0.05, 0.4, 0.02),
+      new THREE.MeshStandardMaterial({
+        color: 0xcccccc,
+        metalness: 1,
+        roughness: 0.2
+      })
+    );
+    hoja.position.y = 0.2;
+    armaModel.add(hoja);
+
+    const mango = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.04, 0.04, 0.2),
+      new THREE.MeshStandardMaterial({ color: 0x3a2a1a })
+    );
+    mango.position.y = -0.1;
+    armaModel.add(mango);
+
+    armaModel.position.set(0.4, -0.4, 0.8);
+    armaModel.rotation.set(0, Math.PI / 4, -Math.PI / 6);
+  }
+
+  brazo.add(armaModel);
+  return brazo;
+}
+
+// ============ CAMBIAR ARMA ============
+function cambiarArma(nuevaArma) {
+  if(!gameStarted) return;
+
+  armaActual = nuevaArma;
+
+  // Remover arma anterior
+  const armaVieja = player.children.find(c => c.userData.esArma);
+  if(armaVieja) player.remove(armaVieja);
+
+  // Agregar nueva arma
+  const nuevaArmaModel = crearBrazoConArma(nuevaArma);
+  nuevaArmaModel.userData.esArma = true;
+  player.add(nuevaArmaModel);
+
+  // Actualizar UI
+  document.getElementById('arma-actual').textContent = nuevaArma.toUpperCase();
 }
 
 // ============ CREAR ENEMIGOS ============
@@ -647,6 +804,9 @@ function crearEnemigos() {
   jefe.position.set(0, 0, -40 - nivel * 5);
   scene.add(jefe);
 
+  // Crear items de vida
+  crearItemsVida();
+
   actualizarHUD();
 }
 
@@ -670,12 +830,20 @@ function playSound(type) {
       oscillator.stop(audioContext.currentTime + 0.08);
       break;
     case 'hit':
-      oscillator.type = 'sawtooth';
-      oscillator.frequency.value = 180;
-      gainNode.gain.setValueAtTime(0.25, audioContext.currentTime);
+      oscillator.type = 'square';
+      oscillator.frequency.value = 250;
+      gainNode.gain.setValueAtTime(0.35, audioContext.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.2);
+      break;
+    case 'knife':
+      oscillator.type = 'sawtooth';
+      oscillator.frequency.value = 400;
+      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.15);
       break;
     case 'death':
       oscillator.type = 'sawtooth';
@@ -744,6 +912,41 @@ function crearExplosion(position, color = 0xff0000, count = 20) {
     };
     animate();
   }
+}
+
+// ============ NÚMEROS DE DAÑO FLOTANTES ============
+function mostrarDanio(posicion, cantidad) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.font = 'Bold 48px Arial';
+  ctx.fillStyle = '#ff0000';
+  ctx.fillText('-' + Math.round(cantidad), 10, 50);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+  const sprite = new THREE.Sprite(material);
+
+  sprite.position.copy(posicion);
+  sprite.position.y += 1;
+  sprite.scale.set(1, 0.5, 1);
+  scene.add(sprite);
+
+  // Animar hacia arriba y fade
+  let opacity = 1;
+  const animateText = () => {
+    sprite.position.y += 0.02;
+    opacity -= 0.02;
+    sprite.material.opacity = opacity;
+
+    if(opacity > 0) {
+      requestAnimationFrame(animateText);
+    } else {
+      scene.remove(sprite);
+    }
+  };
+  animateText();
 }
 
 // ============ SISTEMA DE BOMBAS ============
@@ -863,6 +1066,9 @@ function actualizarBombas(deltaTime) {
           // ACTUALIZAR BARRA INMEDIATAMENTE
           actualizarBarraVida(e);
 
+          // MOSTRAR DAÑO FLOTANTE
+          mostrarDanio(e.position, danio);
+
           // Efecto visual
           crearExplosion(e.position, 0xff0000, 15);
 
@@ -901,23 +1107,167 @@ function actualizarHUD() {
   document.getElementById('jefe-vida').textContent = jefe ? Math.max(0, Math.round((jefe.vida / jefe.vidaMax) * 100)) : 0;
 }
 
-// ============ ACTUALIZAR BARRA DE VIDA INDIVIDUAL ============
+// ============ ACTUALIZAR TEXTO DE VIDA INDIVIDUAL ============
 function actualizarBarraVida(enemigo) {
-  if(!enemigo || !enemigo.barraVida) return;
+  if(!enemigo) return;
 
-  const porcentaje = Math.max(0, enemigo.vida / enemigo.vidaMax);
+  const porcentaje = Math.max(0, Math.round((enemigo.vida / enemigo.vidaMax) * 100));
 
-  // Actualizar ancho de la barra
-  enemigo.barraVida.scale.x = porcentaje;
-  enemigo.barraVida.position.x = -(enemigo.barraVidaWidth - enemigo.barraVidaWidth * porcentaje) / 2;
+  // Eliminar texto anterior si existe
+  const textoAnterior = enemigo.children.find(c => c.userData.esTextoVida);
+  if(textoAnterior) enemigo.remove(textoAnterior);
 
-  // Color según porcentaje de vida
-  if(porcentaje > 0.6) {
-    enemigo.barraVida.material.color.setHex(0x00ff00); // Verde
-  } else if(porcentaje > 0.3) {
-    enemigo.barraVida.material.color.setHex(0xffff00); // Amarillo
-  } else {
-    enemigo.barraVida.material.color.setHex(0xff0000); // Rojo
+  // Determinar color según porcentaje
+  const color = porcentaje < 50 ? '#ff0000' : '#00ff00';  // Rojo si <50%, Verde si >=50%
+
+  // Crear canvas con texto
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+
+  ctx.font = 'Bold 40px Arial';
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.fillText(porcentaje + '%', 64, 45);
+
+  // Crear sprite
+  const texture = new THREE.CanvasTexture(canvas);
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthTest: false  // Siempre visible sobre el enemigo
+  });
+  const sprite = new THREE.Sprite(material);
+
+  // Posicionar sobre el enemigo
+  sprite.position.set(0, 2, 0);
+  sprite.scale.set(1, 0.5, 1);
+  sprite.userData.esTextoVida = true;
+  sprite.raycast = () => {};  // No interferir con disparos
+
+  enemigo.add(sprite);
+}
+
+// ============ PORTAL DE SIGUIENTE NIVEL ============
+function crearPortal() {
+  portal = new THREE.Group();
+
+  // Plataforma verde fluorescente
+  const plataforma = new THREE.Mesh(
+    new THREE.CylinderGeometry(2, 2, 0.2, 32),
+    new THREE.MeshStandardMaterial({
+      color: 0x00ff00,
+      emissive: 0x00ff00,
+      emissiveIntensity: 0.8,
+      transparent: true,
+      opacity: 0.7
+    })
+  );
+  plataforma.position.y = 0.1;
+  portal.add(plataforma);
+
+  // Partículas verdes flotantes
+  for(let i = 0; i < 20; i++) {
+    const particula = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1),
+      new THREE.MeshBasicMaterial({
+        color: 0x00ff00,
+        transparent: true,
+        opacity: 0.6
+      })
+    );
+    particula.position.set(
+      Math.random() * 3 - 1.5,
+      Math.random() * 3,
+      Math.random() * 3 - 1.5
+    );
+    particula.userData.offsetY = Math.random() * Math.PI * 2;
+    portal.add(particula);
+  }
+
+  // Luz verde brillante
+  const luz = new THREE.PointLight(0x00ff00, 2, 10);
+  luz.position.y = 2;
+  portal.add(luz);
+
+  // Posición del portal (adelante del jugador)
+  portal.position.set(0, 0, -15);
+  scene.add(portal);
+}
+
+// ============ SISTEMA DE ITEMS DE VIDA ============
+function crearItemVida() {
+  const item = new THREE.Group();
+
+  // Corazón (geometría simple - esfera)
+  const corazon = new THREE.Mesh(
+    new THREE.SphereGeometry(0.3, 16, 16),
+    new THREE.MeshStandardMaterial({
+      color: 0xff0066,
+      emissive: 0xff0066,
+      emissiveIntensity: 0.6,
+      metalness: 0.4,
+      roughness: 0.3
+    })
+  );
+  item.add(corazon);
+
+  // Cruz médica horizontal
+  const cruzH = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.1, 0.05),
+    new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0xffffff,
+      emissiveIntensity: 0.3
+    })
+  );
+  cruzH.position.z = 0.35;
+  item.add(cruzH);
+
+  // Cruz médica vertical
+  const cruzV = new THREE.Mesh(
+    new THREE.BoxGeometry(0.1, 0.5, 0.05),
+    new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0xffffff,
+      emissiveIntensity: 0.3
+    })
+  );
+  cruzV.position.z = 0.35;
+  item.add(cruzV);
+
+  // Luz brillante rosa
+  const luz = new THREE.PointLight(0xff0066, 1.5, 6);
+  luz.position.y = 0.5;
+  item.add(luz);
+
+  item.userData.esItemVida = true;
+  item.userData.curacion = 25; // +25% de vida
+
+  return item;
+}
+
+function crearItemsVida() {
+  // Limpiar items anteriores
+  itemsVida.forEach(i => scene.remove(i));
+  itemsVida.length = 0;
+
+  // Crear 3-5 items por nivel
+  const numItems = 3 + Math.floor(Math.random() * 3);
+
+  for(let i = 0; i < numItems; i++) {
+    const item = crearItemVida();
+
+    // Posición aleatoria en el mapa (evitando spawn muy cerca del jugador)
+    item.position.set(
+      Math.random() * 60 - 30,  // x: -30 a +30
+      0.5,                       // y: flotando
+      Math.random() * 50 - 40   // z: -40 a +10 (más lejos del spawn)
+    );
+
+    scene.add(item);
+    itemsVida.push(item);
   }
 }
 
@@ -925,8 +1275,21 @@ function actualizarBarraVida(enemigo) {
 window.addEventListener('keydown', e => {
   keys[e.key.toLowerCase()] = true;
 
-  // Bomba con ESPACIO
-  if(e.key === ' ') {
+  // Cambio de arma
+  if(e.key === '1') cambiarArma('pistola');
+  if(e.key === '2') cambiarArma('granada');
+  if(e.key === '3') cambiarArma('cuchillo');
+
+  // Rueda de armas con Q
+  if(e.key === 'q' || e.key === 'Q') {
+    const armasArray = ['pistola', 'granada', 'cuchillo'];
+    const indexActual = armasArray.indexOf(armaActual);
+    const siguienteIndex = (indexActual + 1) % 3;
+    cambiarArma(armasArray[siguienteIndex]);
+  }
+
+  // Bomba con ESPACIO (solo si arma es granada)
+  if(e.key === ' ' && armaActual === 'granada') {
     e.preventDefault();
     lanzarBomba();
   }
@@ -943,9 +1306,44 @@ window.addEventListener('keyup', e => {
 // Pointer Lock
 document.getElementById('click-to-start').addEventListener('click', () => {
   document.getElementById('click-to-start').style.display = 'none';
+  document.getElementById('menu-control').style.display = 'block';
   renderer.domElement.requestPointerLock();
   gameStarted = true;
+
+  // Inicializar arma pistola
+  cambiarArma('pistola');
+
   crearEnemigos();
+});
+
+// Event listeners del menú de control
+document.getElementById('btn-reiniciar-nivel').addEventListener('click', () => {
+  // Limpiar enemigos actuales
+  enemigos.forEach(e => scene.remove(e));
+  if(jefe) scene.remove(jefe);
+  if(portal) scene.remove(portal);
+
+  // Limpiar items de vida
+  itemsVida.forEach(i => scene.remove(i));
+
+  // Resetear jugador
+  player.position.set(0, 0, 0);
+  vidaJugador = 100;
+
+  // Recrear enemigos del nivel actual
+  crearEnemigos();
+  actualizarHUD();
+
+  // Volver a pointer lock
+  renderer.domElement.requestPointerLock();
+});
+
+document.getElementById('btn-reiniciar-juego').addEventListener('click', () => {
+  location.reload();
+});
+
+document.getElementById('btn-restart-gameover').addEventListener('click', () => {
+  location.reload();
 });
 
 document.addEventListener('pointerlockchange', () => {
@@ -968,27 +1366,41 @@ document.addEventListener('mousemove', (e) => {
 document.addEventListener('click', () => {
   if(!gameStarted || gamePaused || !canShoot || vidaJugador <= 0) return;
 
+  // Granada se lanza con ESPACIO, no con click
+  if(armaActual === 'granada') return;
+
+  const armaConfig = armas[armaActual];
+
+  // Cooldown según arma
   canShoot = false;
-  setTimeout(() => canShoot = true, shootCooldown);
+  setTimeout(() => canShoot = true, armaConfig.cooldown);
 
-  playSound('shoot');
+  // Sonido según arma
+  if(armaActual === 'pistola') {
+    playSound('shoot');
+  } else if(armaActual === 'cuchillo') {
+    playSound('knife');
+  }
 
-  // Fogonazo
-  const muzzleFlash = new THREE.PointLight(0xffff00, 2, 5);
-  muzzleFlash.position.copy(camera.getWorldPosition(new THREE.Vector3()));
-  scene.add(muzzleFlash);
-  setTimeout(() => scene.remove(muzzleFlash), 50);
+  // Fogonazo (solo pistola)
+  if(armaActual === 'pistola') {
+    const muzzleFlash = new THREE.PointLight(0xffff00, 2, 5);
+    muzzleFlash.position.copy(camera.getWorldPosition(new THREE.Vector3()));
+    scene.add(muzzleFlash);
+    setTimeout(() => scene.remove(muzzleFlash), 50);
+  }
 
-  // Raycaster SIN LÍMITE DE DISTANCIA
+  // Raycaster con alcance según arma
   const raycaster = new THREE.Raycaster();
-  raycaster.far = Infinity; // ¡CRÍTICO! Sin límites
+  raycaster.far = armaConfig.alcance;
 
   const direction = new THREE.Vector3(0, 0, -1);
   direction.applyQuaternion(camera.quaternion);
   raycaster.set(camera.getWorldPosition(new THREE.Vector3()), direction);
 
   const objetivos = [...enemigos, jefe].filter(e => e && e.parent);
-  const hits = raycaster.intersectObjects(objetivos, true);
+  const hits = raycaster.intersectObjects(objetivos, true)
+    .filter(hit => !hit.object.userData.esTextoVida);
 
   if(hits.length > 0) {
     // Buscar el grupo enemigo en la jerarquía
@@ -999,18 +1411,21 @@ document.addEventListener('click', () => {
 
     // Verificar que encontramos un enemigo válido
     if(obj && obj.userData.esEnemigo && obj.vida !== undefined) {
-      obj.vida -= 20;
+      obj.vida -= armaConfig.danio;
       playSound('hit');
 
       // SANGRE roja
       crearExplosion(hits[0].point, 0xaa0000, 15);
+
+      // MOSTRAR DAÑO FLOTANTE
+      mostrarDanio(hits[0].point, armaConfig.danio);
 
       // ACTUALIZAR BARRA INMEDIATAMENTE
       actualizarBarraVida(obj);
 
       // Parpadeo rojo
       obj.traverse((child) => {
-        if(child.material && child.material.color && !child.userData.esBarraVida) {
+        if(child.material && child.material.color && !child.userData.esTextoVida) {
           const originalColor = child.material.color.clone();
           child.material.color.setHex(0xff0000);
           setTimeout(() => {
@@ -1039,17 +1454,19 @@ document.addEventListener('click', () => {
     }
   }
 
-  // Línea de trazado
-  const lineGeometry = new THREE.BufferGeometry().setFromPoints([
-    camera.getWorldPosition(new THREE.Vector3()),
-    camera.getWorldPosition(new THREE.Vector3()).add(direction.multiplyScalar(1000))
-  ]);
-  const line = new THREE.Line(
-    lineGeometry,
-    new THREE.LineBasicMaterial({ color: 0xff4444, transparent: true, opacity: 0.6 })
-  );
-  scene.add(line);
-  setTimeout(() => scene.remove(line), 50);
+  // Línea de trazado (solo pistola)
+  if(armaActual === 'pistola') {
+    const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+      camera.getWorldPosition(new THREE.Vector3()),
+      camera.getWorldPosition(new THREE.Vector3()).add(direction.clone().multiplyScalar(1000))
+    ]);
+    const line = new THREE.Line(
+      lineGeometry,
+      new THREE.LineBasicMaterial({ color: 0xff4444, transparent: true, opacity: 0.6 })
+    );
+    scene.add(line);
+    setTimeout(() => scene.remove(line), 50);
+  }
 });
 
 // ============ NIVEL COMPLETADO ============
@@ -1057,18 +1474,14 @@ function nivelCompletado() {
   if(enemigos.length === 0 && !jefe) {
     playSound('levelup');
 
+    // CREAR PORTAL
+    crearPortal();
+
     document.getElementById('lc-bajas').textContent = bajasTotal;
     document.getElementById('lc-vida').textContent = Math.round(vidaJugador);
     document.getElementById('level-complete').style.display = 'block';
 
-    setTimeout(() => {
-      document.getElementById('level-complete').style.display = 'none';
-      nivel++;
-      vidaJugador = Math.min(100, vidaJugador + 20);
-      aplicarTema(nivel);
-      crearEnemigos();
-      actualizarHUD();
-    }, 3000);
+    // No avanzar automáticamente, esperar a que entre al portal
   }
 }
 
@@ -1128,6 +1541,64 @@ function animate() {
   // Actualizar bombas
   actualizarBombas(deltaTime);
 
+  // Animación y detección de portal
+  if(portal && portal.parent) {
+    // Rotación
+    portal.rotation.y += 0.01;
+
+    // Partículas flotantes
+    portal.children.forEach((child, i) => {
+      if(i > 1 && child.geometry?.type === 'SphereGeometry') {
+        child.position.y += Math.sin(Date.now() * 0.001 + child.userData.offsetY) * 0.01;
+      }
+    });
+
+    // Detectar entrada al portal
+    const dist = player.position.distanceTo(portal.position);
+    if(dist < 2.5) {
+      // Jugador entró al portal
+      scene.remove(portal);
+      portal = null;
+
+      document.getElementById('level-complete').style.display = 'none';
+      nivel++;
+      vidaJugador = Math.min(100, vidaJugador + 20);
+      aplicarTema(nivel);
+      crearEnemigos();
+      actualizarHUD();
+    }
+  }
+
+  // Animación y detección de items de vida
+  itemsVida.forEach((item, index) => {
+    if(!item.parent) return;
+
+    // Rotación continua
+    item.rotation.y += 0.02 * deltaTime;
+
+    // Flotación suave
+    item.position.y = 0.5 + Math.sin(Date.now() * 0.003) * 0.2;
+
+    // Detectar recogida
+    const dist = player.position.distanceTo(item.position);
+
+    if(dist < 1.8) {
+      // Recoger item
+      vidaJugador = Math.min(100, vidaJugador + item.userData.curacion);
+
+      // Efecto visual rosa
+      crearExplosion(item.position, 0xff0066, 30);
+      playSound('levelup'); // Sonido positivo
+
+      // Remover item
+      scene.remove(item);
+      itemsVida.splice(index, 1);
+
+      // Actualizar HUD
+      actualizarHUD();
+    }
+  });
+
   // Movimiento de enemigos
   [...enemigos, jefe].forEach(e => {
     if(!e || !e.parent) return;
@@ -1142,14 +1613,6 @@ function animate() {
     direction.normalize();
 
     e.position.add(direction.multiplyScalar(e.velocidad * deltaTime));
-
-    // Actualizar orientación de BARRA DE VIDA (Billboard)
-    if(e.barraVida && e.barraVidaFondo) {
-      const cameraPos = camera.getWorldPosition(new THREE.Vector3());
-      e.barraVida.lookAt(cameraPos);
-      e.barraVidaFondo.lookAt(cameraPos);
-      // Escala y color se actualizan en actualizarBarraVida() al recibir daño
-    }
 
     // Animación de cola
     const cola = e.children.find(c => c.geometry?.type === 'CylinderGeometry' && c.position.z < 0);
