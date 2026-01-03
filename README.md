@@ -11,9 +11,10 @@ Juego de supervivencia en 3D con gráficos terroríficos y mecánicas de FPS.
 - **WASD** - Moverse
 - **Mouse** - Apuntar
 - **Click** - Disparar (todas las armas disparan hacia donde apuntas)
-- **1** - Pistola (20 daño, alcance infinito)
+- **1** - Pistola (20 daño, alcance 1000m)
 - **2** - Granada (80 daño, alcance 20m, dispara proyectil con click)
 - **3** - Cuchillo (50 daño, alcance 2m)
+- **4** - ⚡ Rayo Sofi (150 daño, alcance 1000m, cooldown 5 seg) - ¡EL MÁS PODEROSO!
 - **Q** - Cambiar arma (ciclo)
 - **ESPACIO** - Lanzar bomba de área (cooldown 6 seg)
 - **ESC** - Salir del modo pointer lock
@@ -22,7 +23,9 @@ Juego de supervivencia en 3D con gráficos terroríficos y mecánicas de FPS.
 
 ✅ Controles FPS completos con mouse look
 ✅ **Sistema de disparos ultra-robusto** - Raycasting optimizado con detección precisa (getWorldQuaternion), protección contra null, límite de iteraciones, sistema de layers y debug logging
-✅ Sistema de armas balanceado (Pistola/Granada/Cuchillo)
+✅ **4 Armas únicas** - Pistola, Granada, Cuchillo y Rayo Sofi (el más poderoso)
+✅ **⚡ Rayo Sofi** - Arma especial con efecto de rayo rosa, ramificaciones secundarias, explosiones rosa y 150 de daño
+✅ **Portal espejo mágico** - Espejo vertical con marco dorado y superficie cristalina para avanzar de nivel
 ✅ Granada dispara hacia donde apuntas con el mouse
 ✅ Bombas con física realista y explosiones de área
 ✅ Sistema de salud con porcentaje visible (verde ≥50%, rojo <50%)
@@ -30,8 +33,8 @@ Juego de supervivencia en 3D con gráficos terroríficos y mecánicas de FPS.
 ✅ 5 niveles temáticos terroríficos con portales de progresión
 ✅ Items de vida distribuidos por el mapa (+25% de curación)
 ✅ Mensajes motivacionales de la Princesa Sofi
-✅ Efectos de sangre y partículas
-✅ Sonidos generados proceduralmente
+✅ Efectos de sangre, rayos y partículas
+✅ Sonidos generados proceduralmente (incluyendo trueno para Rayo Sofi)
 ✅ Progresión de dificultad
 ✅ Menú de control para reiniciar nivel o juego
 

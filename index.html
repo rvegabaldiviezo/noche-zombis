@@ -309,12 +309,12 @@ body {
 
 <div id="weapon-indicator">
   🔫 Arma: <span id="arma-actual">PISTOLA</span><br>
-  <span style="font-size: 12px; opacity: 0.7;">1-Pistola | 2-Granada | 3-Cuchillo | Q-Cambiar</span>
+  <span style="font-size: 12px; opacity: 0.7;">1-Pistola | 2-Granada | 3-Cuchillo | 4-Rayo Sofi | Q-Cambiar</span>
 </div>
 
 <div id="instructions">
   🎮 WASD mover | 🖱 Mouse apuntar | 🔫 Click disparar<br>
-  💣 ESPACIO granada | 🔪 1-Pistola 2-Granada 3-Cuchillo | Q-Cambiar arma | ESC salir
+  💣 ESPACIO bomba | ⚡ 4-Rayo Sofi | 🔪 1-Pistola 2-Granada 3-Cuchillo | Q-Cambiar arma | ESC salir
 </div>
 
 <div id="crosshair">
@@ -377,11 +377,12 @@ let bombaCooldown = 6000;
 let bombasActivas = [];
 
 // Sistema de armas
-let armaActual = 'pistola'; // 'pistola', 'granada', 'cuchillo'
+let armaActual = 'pistola'; // 'pistola', 'granada', 'cuchillo', 'rayosofi'
 const armas = {
   pistola: { danio: 20, cooldown: 200, alcance: 1000 },
   granada: { danio: 80, cooldown: 6000, alcance: 20 },
-  cuchillo: { danio: 50, cooldown: 500, alcance: 2 }
+  cuchillo: { danio: 50, cooldown: 500, alcance: 2 },
+  rayosofi: { danio: 150, cooldown: 5000, alcance: 1000 }
 };
 
 // Portal de nivel
@@ -763,6 +764,46 @@ function crearBrazoConArma(tipoArma) {
 
     armaModel.position.set(0.4, -0.4, 0.8);
     armaModel.rotation.set(0, Math.PI / 4, -Math.PI / 6);
+
+  } else if(tipoArma === 'rayosofi') {
+    armaModel = new THREE.Group();
+
+    // Cristal brillante (fuente del rayo)
+    const cristal = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.15),
+      new THREE.MeshStandardMaterial({
+        color: 0xff69b4,
+        emissive: 0xff69b4,
+        emissiveIntensity: 1,
+        metalness: 0.8,
+        roughness: 0.2,
+        transparent: true,
+        opacity: 0.9
+      })
+    );
+    cristal.position.set(0.4, -0.3, 0.8);
+    armaModel.add(cristal);
+
+    // Partículas de energía alrededor
+    for(let i = 0; i < 8; i++) {
+      const particula = new THREE.Mesh(
+        new THREE.SphereGeometry(0.02),
+        new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.8
+        })
+      );
+      const angle = (i / 8) * Math.PI * 2;
+      particula.position.set(
+        0.4 + Math.cos(angle) * 0.2,
+        -0.3 + Math.sin(angle) * 0.2,
+        0.8
+      );
+      armaModel.add(particula);
+    }
+
+    armaModel.position.set(0, 0, 0);
   }
 
   brazo.add(armaModel);
@@ -882,6 +923,14 @@ function playSound(type) {
       gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.8);
+      break;
+    case 'thunder':
+      oscillator.type = 'sawtooth';
+      oscillator.frequency.value = 80;
+      gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
       break;
   }
 }
@@ -1059,6 +1108,175 @@ function lanzarGranada() {
   playSound('shoot');
 }
 
+function dispararRayoSofi() {
+  if(!canShoot || !gameStarted || gamePaused) return;
+
+  const armaConfig = armas.rayosofi;
+
+  // Cooldown
+  canShoot = false;
+  setTimeout(() => canShoot = true, armaConfig.cooldown);
+
+  // Sonido de trueno
+  playSound('thunder');
+
+  // Raycaster para detectar enemigo
+  const raycaster = new THREE.Raycaster();
+  raycaster.far = armaConfig.alcance;
+  raycaster.layers.set(0);
+
+  const direction = new THREE.Vector3(0, 0, -1);
+  direction.applyQuaternion(camera.getWorldQuaternion(new THREE.Quaternion()));
+  raycaster.set(camera.getWorldPosition(new THREE.Vector3()), direction);
+
+  const objetivos = [...enemigos, ...(jefe ? [jefe] : [])];
+  const hits = raycaster.intersectObjects(objetivos, true)
+    .filter(hit => !hit.object.userData.esTextoVida);
+
+  let puntoImpacto;
+  let enemigoImpactado = null;
+
+  if(hits.length > 0) {
+    // Buscar enemigo
+    let obj = hits[0].object;
+    let maxIteraciones = 10;
+
+    while(obj && obj.parent && !obj.userData.esEnemigo && maxIteraciones > 0) {
+      obj = obj.parent;
+      maxIteraciones--;
+    }
+
+    if(obj && obj.userData && obj.userData.esEnemigo) {
+      if(typeof obj.vida === 'number') {
+        enemigoImpactado = obj;
+        puntoImpacto = hits[0].point;
+      }
+    }
+  }
+
+  // Si no impacta, el rayo va hasta el horizonte
+  if(!puntoImpacto) {
+    puntoImpacto = camera.getWorldPosition(new THREE.Vector3())
+      .add(direction.multiplyScalar(100));
+  }
+
+  // CREAR EFECTO VISUAL DEL RAYO
+  crearEfectoRayo(camera.getWorldPosition(new THREE.Vector3()), puntoImpacto);
+
+  // Si impactó enemigo, aplicar daño
+  if(enemigoImpactado) {
+    enemigoImpactado.vida -= armaConfig.danio;
+    playSound('hit');
+
+    // Explosión rosa intensa
+    crearExplosion(puntoImpacto, 0xff69b4, 40);
+
+    // Daño flotante
+    mostrarDanio(puntoImpacto, armaConfig.danio);
+
+    // Actualizar vida
+    actualizarBarraVida(enemigoImpactado);
+
+    // Parpadeo rosa/blanco
+    enemigoImpactado.traverse((child) => {
+      if(child.material && child.material.color && !child.userData.esTextoVida) {
+        const originalColor = child.material.color.clone();
+        child.material.color.setHex(0xffffff);
+        setTimeout(() => {
+          if(child.material) {
+            child.material.color.setHex(0xff69b4);
+            setTimeout(() => {
+              if(child.material) child.material.color.copy(originalColor);
+            }, 100);
+          }
+        }, 50);
+      }
+    });
+
+    // Si muere
+    if(enemigoImpactado.vida <= 0) {
+      playSound('death');
+      crearExplosion(enemigoImpactado.position, 0xff69b4, 60);
+      scene.remove(enemigoImpactado);
+
+      if(enemigoImpactado === jefe) {
+        bajasTotal++;
+        jefe = null;
+        nivelCompletado();
+      } else {
+        enemigos = enemigos.filter(e => e !== enemigoImpactado);
+        bajasTotal++;
+      }
+    }
+
+    actualizarHUD();
+  }
+}
+
+function crearEfectoRayo(origen, destino) {
+  // RAYO PRINCIPAL (línea gruesa rosa brillante)
+  const puntos = [origen, destino];
+  const geometriaRayo = new THREE.BufferGeometry().setFromPoints(puntos);
+
+  const materialRayo = new THREE.LineBasicMaterial({
+    color: 0xff69b4,
+    linewidth: 5,
+    transparent: true,
+    opacity: 1
+  });
+
+  const rayoPrincipal = new THREE.Line(geometriaRayo, materialRayo);
+  scene.add(rayoPrincipal);
+
+  // RAYOS SECUNDARIOS (efecto de ramificación)
+  for(let i = 0; i < 5; i++) {
+    const offset = new THREE.Vector3(
+      (Math.random() - 0.5) * 2,
+      (Math.random() - 0.5) * 2,
+      (Math.random() - 0.5) * 2
+    );
+
+    const puntoMedio = new THREE.Vector3()
+      .lerpVectors(origen, destino, 0.3 + Math.random() * 0.4)
+      .add(offset);
+
+    const puntosSecundarios = [puntoMedio, destino];
+    const geoSecundaria = new THREE.BufferGeometry().setFromPoints(puntosSecundarios);
+    const matSecundaria = new THREE.LineBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.6
+    });
+
+    const rayoSecundario = new THREE.Line(geoSecundaria, matSecundaria);
+    scene.add(rayoSecundario);
+
+    // Eliminar después de 150ms
+    setTimeout(() => scene.remove(rayoSecundario), 150);
+  }
+
+  // LUZ BRILLANTE en el punto de impacto
+  const luzImpacto = new THREE.PointLight(0xff69b4, 5, 20);
+  luzImpacto.position.copy(destino);
+  scene.add(luzImpacto);
+
+  // Fade out y eliminar
+  let opacity = 1;
+  let intensidad = 5;
+  const fadeInterval = setInterval(() => {
+    opacity -= 0.1;
+    intensidad -= 0.5;
+    materialRayo.opacity = opacity;
+    luzImpacto.intensity = intensidad;
+
+    if(opacity <= 0) {
+      clearInterval(fadeInterval);
+      scene.remove(rayoPrincipal);
+      scene.remove(luzImpacto);
+    }
+  }, 20);
+}
+
 function actualizarBombas(deltaTime) {
   bombasActivas.forEach((bomba, index) => {
     if(!bomba.parent) {
@@ -1192,50 +1410,70 @@ function actualizarBarraVida(enemigo) {
   enemigo.add(sprite);
 }
 
-// ============ PORTAL DE SIGUIENTE NIVEL ============
+// ============ PORTAL DE SIGUIENTE NIVEL (ESPEJO MÁGICO) ============
 function crearPortal() {
   portal = new THREE.Group();
 
-  // Plataforma verde fluorescente
-  const plataforma = new THREE.Mesh(
-    new THREE.CylinderGeometry(2, 2, 0.2, 32),
+  // MARCO DEL ESPEJO (dorado brillante)
+  const marco = new THREE.Mesh(
+    new THREE.BoxGeometry(3, 4, 0.2),
     new THREE.MeshStandardMaterial({
-      color: 0x00ff00,
-      emissive: 0x00ff00,
-      emissiveIntensity: 0.8,
-      transparent: true,
-      opacity: 0.7
+      color: 0xffd700,
+      metalness: 0.9,
+      roughness: 0.1,
+      emissive: 0xaa8800,
+      emissiveIntensity: 0.3
     })
   );
-  plataforma.position.y = 0.1;
-  portal.add(plataforma);
+  marco.position.y = 2;
+  marco.castShadow = true;
+  portal.add(marco);
 
-  // Partículas verdes flotantes
-  for(let i = 0; i < 20; i++) {
+  // SUPERFICIE REFLECTANTE (interior del espejo)
+  const espejo = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.6, 3.6),
+    new THREE.MeshStandardMaterial({
+      color: 0x88ccff,
+      metalness: 1,
+      roughness: 0,
+      transparent: true,
+      opacity: 0.6,
+      emissive: 0x4488ff,
+      emissiveIntensity: 0.5
+    })
+  );
+  espejo.position.set(0, 2, 0.11);
+  portal.add(espejo);
+
+  // Partículas flotantes alrededor del espejo
+  for(let i = 0; i < 30; i++) {
     const particula = new THREE.Mesh(
-      new THREE.SphereGeometry(0.1),
+      new THREE.SphereGeometry(0.05),
       new THREE.MeshBasicMaterial({
-        color: 0x00ff00,
+        color: 0xffffff,
         transparent: true,
-        opacity: 0.6
+        opacity: 0.8
       })
     );
+    const angle = (i / 30) * Math.PI * 2;
+    const radio = 1.5 + Math.random() * 0.5;
     particula.position.set(
-      Math.random() * 3 - 1.5,
-      Math.random() * 3,
-      Math.random() * 3 - 1.5
+      Math.cos(angle) * radio,
+      2 + Math.sin(i * 0.5) * 1.5,
+      Math.sin(angle) * radio
     );
     particula.userData.offsetY = Math.random() * Math.PI * 2;
+    particula.userData.velocidad = 0.02 + Math.random() * 0.03;
     portal.add(particula);
   }
 
-  // Luz verde brillante
-  const luz = new THREE.PointLight(0x00ff00, 2, 10);
-  luz.position.y = 2;
+  // Luz brillante azul cristalina
+  const luz = new THREE.PointLight(0x88ccff, 3, 15);
+  luz.position.set(0, 2, 0);
   portal.add(luz);
 
-  // Posición del portal (adelante del jugador)
-  portal.position.set(0, 0, -15);
+  // POSICIÓN ADELANTE DEL JUGADOR (VISIBLE)
+  portal.position.set(0, 0, 15);
   scene.add(portal);
 }
 
@@ -1322,12 +1560,13 @@ window.addEventListener('keydown', e => {
   if(e.key === '1') cambiarArma('pistola');
   if(e.key === '2') cambiarArma('granada');
   if(e.key === '3') cambiarArma('cuchillo');
+  if(e.key === '4') cambiarArma('rayosofi');
 
   // Rueda de armas con Q
   if(e.key === 'q' || e.key === 'Q') {
-    const armasArray = ['pistola', 'granada', 'cuchillo'];
+    const armasArray = ['pistola', 'granada', 'cuchillo', 'rayosofi'];
     const indexActual = armasArray.indexOf(armaActual);
-    const siguienteIndex = (indexActual + 1) % 3;
+    const siguienteIndex = (indexActual + 1) % 4;
     cambiarArma(armasArray[siguienteIndex]);
   }
 
@@ -1412,6 +1651,12 @@ document.addEventListener('click', () => {
   // Granada se lanza como proyectil
   if(armaActual === 'granada') {
     lanzarGranada();
+    return;
+  }
+
+  // Rayo Sofi
+  if(armaActual === 'rayosofi') {
+    dispararRayoSofi();
     return;
   }
 
