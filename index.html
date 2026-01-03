@@ -658,6 +658,9 @@ let bombaDisponible = true;
 let bombaCooldown = 6000;
 let bombasActivas = [];
 
+// Proyectiles de bolas de fuego de zombis
+let bolasDefuego = [];
+
 // Sistema Rayo Sofi
 let rayoSofiDisponible = true;
 let rayoSofiCooldown = 5000;
@@ -989,6 +992,27 @@ function crearZombi(scale = 1, esJefe = false) {
   // MARCAR como enemigo para detección
   zombie.userData.esEnemigo = true;
 
+  // ========== PROPIEDADES PARA IA MEJORADA ==========
+
+  // Movimiento oscilante (zigzag)
+  zombie.userData.oscillationTime = Math.random() * Math.PI * 2; // Fase aleatoria inicial
+  zombie.userData.oscillationSpeed = 3 + Math.random() * 2;      // Velocidad zigzag (3-5)
+  zombie.userData.oscillationAmplitude = 0.8 + Math.random() * 0.4; // Amplitud (0.8-1.2)
+
+  // Disparo de bolas de fuego
+  zombie.userData.laserRange = 25;                                    // Rango de detección (25 metros)
+  zombie.userData.laserDamage = 8;                                    // Daño por impacto (8% de vida)
+  zombie.userData.laserFireRate = 2000;                               // Dispara exactamente cada 2 seg
+  zombie.userData.lastLaserTime = -Math.random() * 2000;              // Cooldown inicial aleatorio
+
+  // Táctica de combate (flanker o charger)
+  zombie.userData.tacticalRole = Math.random() < 0.4 ? 'flanker' : 'charger';
+
+  if(zombie.userData.tacticalRole === 'flanker') {
+    zombie.userData.flankSide = Math.random() < 0.5 ? 'left' : 'right'; // Lado aleatorio
+    zombie.userData.flankDistance = 3 + Math.random() * 2;               // Distancia lateral (3-5)
+  }
+
   // Inicializar texto de vida
   actualizarBarraVida(zombie);
 
@@ -1275,6 +1299,64 @@ function crearExplosion(position, color = 0xff0000, count = 20) {
     };
     animate();
   }
+}
+
+// ============ LANZAR BOLA DE FUEGO (ZOMBI) ============
+function lanzarBolaDeFuego(zombie) {
+  // Crear esfera de fuego
+  const bolaDeFuego = new THREE.Mesh(
+    new THREE.SphereGeometry(0.35, 16, 16),  // Esfera mediana
+    new THREE.MeshStandardMaterial({
+      color: 0xff4500,        // Naranja-rojo fuego
+      emissive: 0xff6600,     // Glow naranja
+      emissiveIntensity: 1.2,
+      metalness: 0.2,
+      roughness: 0.3
+    })
+  );
+
+  // Posición inicial: ojos del zombi
+  bolaDeFuego.position.copy(zombie.position.clone());
+  bolaDeFuego.position.y += 1.2;  // Altura de ojos
+
+  // Calcular dirección hacia el jugador
+  const direction = new THREE.Vector3();
+  direction.subVectors(player.position, bolaDeFuego.position);
+  direction.y = 0;  // Mantener horizontal (no caer al suelo)
+  direction.normalize();
+
+  // Velocidad del proyectil (rápido y con fuerza)
+  bolaDeFuego.userData.velocity = direction.multiplyScalar(0.25);  // Velocidad rápida
+
+  // Propiedades del proyectil
+  bolaDeFuego.userData.tiempoVida = 5;  // 5 segundos máximo (alcanza ~75 metros)
+  bolaDeFuego.userData.damage = zombie.userData.laserDamage;  // Daño del zombi
+  bolaDeFuego.userData.esProyectilZombi = true;
+
+  // Luz de fuego (efecto visual)
+  const fireLight = new THREE.PointLight(0xff6600, 2, 4);
+  bolaDeFuego.add(fireLight);
+
+  // Agregar a escena
+  scene.add(bolaDeFuego);
+  bolasDefuego.push(bolaDeFuego);
+
+  // Sonido de lanzamiento (whoosh)
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const oscillator = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+
+  oscillator.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+
+  oscillator.frequency.value = 200;  // Sonido grave (whoosh)
+  oscillator.type = 'sine';
+
+  gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+
+  oscillator.start(audioCtx.currentTime);
+  oscillator.stop(audioCtx.currentTime + 0.3);
 }
 
 // ============ NÚMEROS DE DAÑO FLOTANTES ============
@@ -1677,6 +1759,74 @@ function actualizarBombas(deltaTime) {
       actualizarHUD();
     }
   });
+}
+
+// ============ ACTUALIZAR BOLAS DE FUEGO (ZOMBIS) ============
+function actualizarBolasDeFuego(deltaTime) {
+  for(let i = bolasDefuego.length - 1; i >= 0; i--) {
+    const bola = bolasDefuego[i];
+
+    // Actualizar posición
+    bola.position.add(bola.userData.velocity.clone().multiplyScalar(deltaTime));
+
+    // Rotación del proyectil (efecto visual)
+    bola.rotation.x += 0.2 * deltaTime;
+    bola.rotation.y += 0.15 * deltaTime;
+
+    // Reducir tiempo de vida
+    bola.userData.tiempoVida -= 0.016 * deltaTime;
+
+    // Verificar colisión con JUGADOR
+    const distToPlayer = bola.position.distanceTo(player.position);
+
+    if(distToPlayer < 2.0 || bola.userData.tiempoVida <= 0) {
+      // IMPACTO!
+
+      if(distToPlayer < 2.0) {
+        // Aplicar daño al jugador
+        vidaJugador -= bola.userData.damage;
+
+        // Flash rojo de daño
+        const overlay = document.getElementById('damage-overlay');
+        overlay.classList.add('active');
+        setTimeout(() => overlay.classList.remove('active'), 300);  // ✅ QUITAR DESPUÉS
+
+        // Actualizar HUD
+        actualizarHUD();
+      }
+
+      // Explosión visual
+      crearExplosion(bola.position, 0xff6600, 30);  // Explosión naranja
+
+      // Luz de explosión
+      const explosionLight = new THREE.PointLight(0xff6600, 5, 10);
+      explosionLight.position.copy(bola.position);
+      scene.add(explosionLight);
+
+      setTimeout(() => scene.remove(explosionLight), 200);
+
+      // Sonido de explosión
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      oscillator.frequency.value = 150;  // Grave (explosión)
+      oscillator.type = 'sawtooth';
+
+      gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+
+      oscillator.start(audioCtx.currentTime);
+      oscillator.stop(audioCtx.currentTime + 0.4);
+
+      // Remover proyectil
+      scene.remove(bola);
+      bolasDefuego.splice(i, 1);
+    }
+  }
 }
 
 // ============ ACTUALIZAR HUD ============
@@ -2399,6 +2549,9 @@ function animate() {
   // Actualizar bombas
   actualizarBombas(deltaTime);
 
+  // Actualizar bolas de fuego de zombis
+  actualizarBolasDeFuego(deltaTime);
+
   // Animación y detección de portal
   if(portal && portal.parent) {
     // Rotación
@@ -2464,13 +2617,38 @@ function animate() {
     // Mirar al jugador
     e.lookAt(player.position);
 
-    // Moverse hacia el jugador
-    const direction = new THREE.Vector3();
+    // ========== MOVIMIENTO MEJORADO (OSCILANTE + FLANKING) ==========
+    let direction = new THREE.Vector3();
     direction.subVectors(player.position, e.position);
     direction.y = 0;
+
+    // APLICAR ESTRATEGIA DE FLANKING
+    if(e.userData.tacticalRole === 'flanker') {
+      // Calcular posición de flanco objetivo
+      const perpendicularFlank = new THREE.Vector3(-direction.z, 0, direction.x);
+      const flankMultiplier = e.userData.flankSide === 'left' ? -1 : 1;
+
+      // Punto objetivo: posición jugador + offset lateral
+      const flankTarget = player.position.clone();
+      flankTarget.add(perpendicularFlank.multiplyScalar(e.userData.flankDistance * flankMultiplier));
+
+      // Redirigir hacia posición de flanco
+      direction.subVectors(flankTarget, e.position);
+      direction.y = 0;
+    }
+
     direction.normalize();
 
-    e.position.add(direction.multiplyScalar(e.velocidad * deltaTime));
+    // APLICAR OSCILACIÓN LATERAL (ZIGZAG)
+    const perpendicular = new THREE.Vector3(-direction.z, 0, direction.x);
+    e.userData.oscillationTime += e.userData.oscillationSpeed * deltaTime * 0.001;
+    const oscillationOffset = Math.sin(e.userData.oscillationTime) * e.userData.oscillationAmplitude;
+
+    const movement = direction.clone();
+    movement.add(perpendicular.multiplyScalar(oscillationOffset));
+    movement.normalize();
+
+    e.position.add(movement.multiplyScalar(e.velocidad * deltaTime));
 
     // Animación de cola
     const cola = e.children.find(c => c.geometry?.type === 'CylinderGeometry' && c.position.z < 0);
@@ -2478,8 +2656,38 @@ function animate() {
       cola.rotation.x = Math.PI / 4 + Math.sin(Date.now() * 0.01) * 0.2;
     }
 
-    // Colisión con jugador
+    // ========== COMPORTAMIENTO ESPECIAL DEL JEFE ==========
+    if(e === jefe && jefe) {
+      // Jefe dispara IGUAL de seguido pero hace MÁS DAÑO
+      e.userData.laserFireRate = 2000;  // Cada 2 segundos (consistente con zombis)
+      e.userData.laserDamage = 12;      // 12 HP de daño (12% de vida - más peligroso)
+
+      // Jefe usa flanking inteligente (se adapta a tu posición)
+      e.userData.tacticalRole = 'flanker';
+      e.userData.flankSide = player.position.x > jefe.position.x ? 'left' : 'right';
+      e.userData.flankDistance = 4;     // Mantiene distancia lateral
+    }
+
+    // ========== DISPARO LÁSER DE ZOMBIS ==========
     const dist = player.position.distanceTo(e.position);
+    const currentTime = Date.now();
+
+    // Verificar si puede disparar láser
+    const canShoot = (
+      dist < e.userData.laserRange &&                                      // Dentro de rango
+      dist > 5 &&                                                          // No demasiado cerca (evitar spam)
+      currentTime - e.userData.lastLaserTime > e.userData.laserFireRate && // Cooldown pasado
+      vidaJugador > 0 &&                                                   // Jugador vivo
+      gameStarted &&                                                       // Juego iniciado
+      !gamePaused                                                          // No pausado
+    );
+
+    if(canShoot) {
+      lanzarBolaDeFuego(e);
+      e.userData.lastLaserTime = currentTime;
+    }
+
+    // Colisión con jugador
     if(dist < 1.5) {
       vidaJugador -= e.danio * 0.016 * deltaTime;
 
