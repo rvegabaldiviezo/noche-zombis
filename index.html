@@ -326,10 +326,14 @@ body {
 <div id="damage-overlay"></div>
 
 <div id="level-complete">
-  <h1>✅ ¡OLA SOBREVIVIDA!</h1>
+  <h1>✅ ¡FELICITACIONES!</h1>
+  <h2 style="font-size: 24px; margin: 10px 0; color: #ffcc00;">🏆 PASASTE AL SIGUIENTE NIVEL 🏆</h2>
   <p>Zombis eliminados: <span id="lc-bajas">0</span></p>
   <p>Vida restante: <span id="lc-vida">0</span>%</p>
-  <p><em>Preparando siguiente ola...</em></p>
+  <p style="font-size: 20px; margin-top: 20px; color: #ff69b4;">
+    <strong>👑 La Princesa Sofi te desea suerte en el siguiente nivel 👑</strong>
+  </p>
+  <p><em>Entra al portal para continuar...</em></p>
 </div>
 
 <div id="game-over">
@@ -342,6 +346,9 @@ body {
 <div id="click-to-start">
   <h1>🦇 NOCHE DE LOS MUERTOS 🦇</h1>
   <p style="font-size: 22px; margin: 20px 0;">¡Sobrevive a las olas de zombis!</p>
+  <p style="font-size: 18px; color: #ff69b4; margin: 15px 0;">
+    <strong>👑 Un juego dedicado a la Princesa Sofi 👑</strong>
+  </p>
   <p style="font-size: 16px; opacity: 0.8;">Haz click para comenzar la pesadilla</p>
 </div>
 
@@ -372,7 +379,7 @@ let bombasActivas = [];
 // Sistema de armas
 let armaActual = 'pistola'; // 'pistola', 'granada', 'cuchillo'
 const armas = {
-  pistola: { danio: 20, cooldown: 200, alcance: Infinity },
+  pistola: { danio: 20, cooldown: 200, alcance: 1000 },
   granada: { danio: 80, cooldown: 6000, alcance: 20 },
   cuchillo: { danio: 50, cooldown: 500, alcance: 2 }
 };
@@ -1017,6 +1024,41 @@ function lanzarBomba() {
   }, 100);
 }
 
+function lanzarGranada() {
+  if(!canShoot || !gameStarted || gamePaused) return;
+
+  const armaConfig = armas.granada;
+
+  // Cooldown
+  canShoot = false;
+  setTimeout(() => canShoot = true, armaConfig.cooldown);
+
+  // Crear proyectil de granada
+  const proyectil = new THREE.Mesh(
+    new THREE.SphereGeometry(0.15),
+    new THREE.MeshStandardMaterial({
+      color: 0x2a4a2a,
+      metalness: 0.5,
+      roughness: 0.4
+    })
+  );
+
+  proyectil.position.copy(camera.getWorldPosition(new THREE.Vector3()));
+
+  // Dirección hacia donde apunta el mouse (cámara)
+  const direction = new THREE.Vector3(0, 0, -1);
+  direction.applyQuaternion(camera.quaternion);
+
+  proyectil.userData.velocity = direction.multiplyScalar(0.8);
+  proyectil.userData.tiempoVida = 2; // Explota después de 2 segundos
+  proyectil.userData.esGranada = true;
+
+  scene.add(proyectil);
+  bombasActivas.push(proyectil);
+
+  playSound('shoot');
+}
+
 function actualizarBombas(deltaTime) {
   bombasActivas.forEach((bomba, index) => {
     if(!bomba.parent) {
@@ -1145,6 +1187,7 @@ function actualizarBarraVida(enemigo) {
   sprite.scale.set(1, 0.5, 1);
   sprite.userData.esTextoVida = true;
   sprite.raycast = () => {};  // No interferir con disparos
+  sprite.layers.set(1);  // Mover a layer 1 (raycaster usa layer 0)
 
   enemigo.add(sprite);
 }
@@ -1366,8 +1409,11 @@ document.addEventListener('mousemove', (e) => {
 document.addEventListener('click', () => {
   if(!gameStarted || gamePaused || !canShoot || vidaJugador <= 0) return;
 
-  // Granada se lanza con ESPACIO, no con click
-  if(armaActual === 'granada') return;
+  // Granada se lanza como proyectil
+  if(armaActual === 'granada') {
+    lanzarGranada();
+    return;
+  }
 
   const armaConfig = armas[armaActual];
 
@@ -1393,24 +1439,33 @@ document.addEventListener('click', () => {
   // Raycaster con alcance según arma
   const raycaster = new THREE.Raycaster();
   raycaster.far = armaConfig.alcance;
+  raycaster.layers.set(0);  // Solo detectar layer 0 (enemigos), ignorar layer 1 (sprites)
 
   const direction = new THREE.Vector3(0, 0, -1);
-  direction.applyQuaternion(camera.quaternion);
+  direction.applyQuaternion(camera.getWorldQuaternion(new THREE.Quaternion()));
   raycaster.set(camera.getWorldPosition(new THREE.Vector3()), direction);
 
-  const objetivos = [...enemigos, jefe].filter(e => e && e.parent);
+  const objetivos = [...enemigos, ...(jefe ? [jefe] : [])];
   const hits = raycaster.intersectObjects(objetivos, true)
     .filter(hit => !hit.object.userData.esTextoVida);
 
   if(hits.length > 0) {
-    // Buscar el grupo enemigo en la jerarquía
+    // Buscar el grupo enemigo en la jerarquía de forma robusta
     let obj = hits[0].object;
-    while(obj && !obj.userData.esEnemigo) {
+    let maxIteraciones = 10;
+
+    while(obj && obj.parent && !obj.userData.esEnemigo && maxIteraciones > 0) {
       obj = obj.parent;
+      maxIteraciones--;
     }
 
-    // Verificar que encontramos un enemigo válido
-    if(obj && obj.userData.esEnemigo && obj.vida !== undefined) {
+    // Verificar que encontramos un enemigo válido con doble validación
+    if(obj && obj.userData && obj.userData.esEnemigo) {
+      if(typeof obj.vida !== 'number') {
+        console.warn('ENEMIGO SIN VIDA VÁLIDA:', obj, obj.vida);
+        return;
+      }
+
       obj.vida -= armaConfig.danio;
       playSound('hit');
 
