@@ -339,94 +339,156 @@ body {
   display: block;
 }
 
+/* Joystick de movimiento - SOLO UNO */
 .joystick-container {
   position: absolute;
-  width: 120px;
-  height: 120px;
+  width: 140px;
+  height: 140px;
   pointer-events: auto;
-}
-
-#joystick-move {
-  bottom: 20px;
-  left: 20px;
-}
-
-#joystick-look {
-  bottom: 20px;
-  right: 20px;
+  bottom: 30px;
+  left: 30px;
 }
 
 .joystick-base {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: rgba(0,0,0,0.5);
-  border: 3px solid rgba(255,68,68,0.6);
+  background: rgba(0,0,0,0.6);
+  border: 4px solid rgba(68,255,68,0.7);
   position: relative;
-  box-shadow: 0 0 20px rgba(255,0,0,0.3);
+  box-shadow: 0 0 30px rgba(68,255,68,0.4);
 }
 
 .joystick-stick {
-  width: 50px;
-  height: 50px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
-  background: rgba(255,68,68,0.8);
+  background: radial-gradient(circle, rgba(68,255,68,0.9), rgba(34,204,34,0.8));
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  box-shadow: 0 0 15px rgba(255,0,0,0.5);
-  border: 2px solid #ff0000;
+  box-shadow: 0 0 20px rgba(68,255,68,0.8);
+  border: 3px solid #44ff44;
 }
 
+/* Área táctil para mirar (toda la pantalla) */
+#touch-look-area {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+  z-index: 501;
+}
+
+/* Botones de acción - LADO DERECHO */
 #mobile-buttons {
   position: absolute;
   right: 20px;
-  top: 50%;
-  transform: translateY(-50%);
+  bottom: 30px;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 12px;
   pointer-events: auto;
+  z-index: 502;
 }
 
-.mobile-btn {
-  width: 70px;
-  height: 70px;
+/* Botón de disparo GRANDE */
+.mobile-btn.shoot-btn {
+  width: 90px;
+  height: 90px;
   border-radius: 50%;
-  background: rgba(0,0,0,0.7);
-  border: 3px solid rgba(255,68,68,0.8);
-  color: #ff4444;
-  font-size: 28px;
+  background: radial-gradient(circle, rgba(255,68,68,0.9), rgba(204,0,0,0.8));
+  border: 4px solid #ff4444;
+  color: white;
+  font-size: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 20px rgba(255,0,0,0.4);
+  box-shadow: 0 0 30px rgba(255,68,68,0.6);
   cursor: pointer;
   user-select: none;
   font-weight: bold;
   transition: all 0.1s;
 }
 
-.mobile-btn:active {
-  background: rgba(255,68,68,0.3);
-  transform: scale(0.95);
-  box-shadow: 0 0 30px rgba(255,0,0,0.8);
+.mobile-btn.shoot-btn:active {
+  background: radial-gradient(circle, rgba(255,100,100,1), rgba(255,68,68,0.9));
+  transform: scale(0.9);
+  box-shadow: 0 0 40px rgba(255,0,0,1);
 }
 
-.mobile-btn.weapon-btn {
-  width: 60px;
-  height: 60px;
-  font-size: 20px;
-  border-color: rgba(68,255,68,0.6);
-  color: #44ff44;
-}
-
-#weapon-selector {
+/* Botón de bomba */
+.mobile-btn.bomb-btn {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,170,0,0.9), rgba(204,136,0,0.8));
+  border: 3px solid #ffaa00;
+  color: white;
+  font-size: 32px;
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  max-width: 140px;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 25px rgba(255,170,0,0.5);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.1s;
+}
+
+.mobile-btn.bomb-btn:active {
+  background: radial-gradient(circle, rgba(255,200,50,1), rgba(255,170,0,0.9));
+  transform: scale(0.9);
+  box-shadow: 0 0 35px rgba(255,170,0,1);
+}
+
+/* Selector de armas - HORIZONTAL CON NOMBRES */
+#weapon-selector {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+  z-index: 502;
+  background: rgba(0,0,0,0.8);
+  padding: 12px 15px;
+  border-radius: 20px;
+  border: 3px solid rgba(68,255,68,0.6);
+  box-shadow: 0 0 30px rgba(0,0,0,0.8);
+}
+
+.weapon-btn {
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: rgba(40,40,40,0.9);
+  border: 2px solid rgba(68,255,68,0.5);
+  color: #44ff44;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.weapon-btn:active {
+  background: rgba(68,255,68,0.4);
+  border-color: #44ff44;
+  transform: scale(0.95);
+  box-shadow: 0 0 15px rgba(68,255,68,0.8);
+}
+
+.weapon-btn.active {
+  background: rgba(68,255,68,0.3);
+  border: 3px solid #44ff44;
+  box-shadow: 0 0 20px rgba(68,255,68,0.6);
 }
 
 @media (max-width: 768px) {
@@ -435,25 +497,25 @@ body {
     padding: 8px 12px;
     bottom: 5px;
   }
-  
+
   #hud, #hud-right {
     font-size: 12px;
     padding: 8px;
     min-width: 140px;
     max-width: 140px;
   }
-  
+
   #weapon-indicator {
     font-size: 11px;
     padding: 6px 10px;
     bottom: 155px;
     left: 5px;
   }
-  
+
   #weapon-indicator span {
     font-size: 9px !important;
   }
-  
+
   #bomb-indicator, #rayosofi-indicator {
     display: none;
   }
@@ -540,30 +602,40 @@ body {
 
   <!-- CONTROLES MÓVILES -->
   <div id="mobile-controls">
-    <!-- Joystick de movimiento -->
+    <!-- Área táctil para mirar (toda la pantalla) -->
+    <div id="touch-look-area"></div>
+
+    <!-- Joystick de movimiento (SOLO UNO) -->
     <div id="joystick-move" class="joystick-container">
       <div class="joystick-base">
         <div class="joystick-stick" id="stick-move"></div>
       </div>
     </div>
-    
-    <!-- Joystick de mirar -->
-    <div id="joystick-look" class="joystick-container">
-      <div class="joystick-base">
-        <div class="joystick-stick" id="stick-look"></div>
+
+    <!-- Selector de armas (arriba) -->
+    <div id="weapon-selector">
+      <div class="weapon-btn active" data-weapon="pistola">
+        <span>🔫</span>
+        <span>Pistola</span>
+      </div>
+      <div class="weapon-btn" data-weapon="granada">
+        <span>💣</span>
+        <span>Granada</span>
+      </div>
+      <div class="weapon-btn" data-weapon="cuchillo">
+        <span>🔪</span>
+        <span>Cuchillo</span>
+      </div>
+      <div class="weapon-btn" data-weapon="rayosofi">
+        <span>⚡</span>
+        <span>Rayo</span>
       </div>
     </div>
-    
-    <!-- Botones de acción -->
+
+    <!-- Botones de acción (abajo derecha) -->
     <div id="mobile-buttons">
-      <div class="mobile-btn" id="btn-shoot">🔫</div>
-      <div class="mobile-btn" id="btn-bomb">💣</div>
-      <div id="weapon-selector">
-        <div class="mobile-btn weapon-btn" data-weapon="pistola">1</div>
-        <div class="mobile-btn weapon-btn" data-weapon="granada">2</div>
-        <div class="mobile-btn weapon-btn" data-weapon="cuchillo">3</div>
-        <div class="mobile-btn weapon-btn" data-weapon="rayosofi">4</div>
-      </div>
+      <div class="mobile-btn shoot-btn" id="btn-shoot">🔫</div>
+      <div class="mobile-btn bomb-btn" id="btn-bomb">💣</div>
     </div>
   </div>
 <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
@@ -615,7 +687,7 @@ let rotationX = 0;
 // Variables para controles móviles
 let isMobile = false;
 let joystickMove = { x: 0, y: 0, active: false };
-let joystickLook = { x: 0, y: 0, active: false };
+let lookTouch = { active: false, lastX: 0, lastY: 0, touchId: null };
 
 // Detectar si es móvil
 function detectarMovil() {
@@ -1795,29 +1867,30 @@ function crearItemsVida() {
 // ============ CONTROLES MÓVILES - JOYSTICKS ============
 function inicializarControlesMobiles() {
   isMobile = detectarMovil();
-  
+
   if(isMobile) {
     document.getElementById('mobile-controls').classList.add('active');
-    document.getElementById('instructions').innerHTML = 
-      '🎮 Joysticks para mover y mirar | 🔫 Botón disparar | 💣 Botón bomba';
+    document.getElementById('instructions').innerHTML =
+      '🎮 Joystick mover | Toca pantalla para mirar | 🔫 Disparar | 💣 Bomba';
   }
-  
-  // Joystick de movimiento
+
+  // ========== JOYSTICK DE MOVIMIENTO ==========
   const moveContainer = document.getElementById('joystick-move');
   const moveStick = document.getElementById('stick-move');
-  
   let moveTouchId = null;
-  
+
   moveContainer.addEventListener('touchstart', (e) => {
     e.preventDefault();
+    e.stopPropagation();
     const touch = e.changedTouches[0];
     moveTouchId = touch.identifier;
     joystickMove.active = true;
     actualizarJoystick(touch, moveContainer, moveStick, joystickMove);
   });
-  
+
   moveContainer.addEventListener('touchmove', (e) => {
     e.preventDefault();
+    e.stopPropagation();
     for(let touch of e.changedTouches) {
       if(touch.identifier === moveTouchId) {
         actualizarJoystick(touch, moveContainer, moveStick, joystickMove);
@@ -1825,9 +1898,10 @@ function inicializarControlesMobiles() {
       }
     }
   });
-  
+
   moveContainer.addEventListener('touchend', (e) => {
     e.preventDefault();
+    e.stopPropagation();
     for(let touch of e.changedTouches) {
       if(touch.identifier === moveTouchId) {
         joystickMove.active = false;
@@ -1839,50 +1913,63 @@ function inicializarControlesMobiles() {
       }
     }
   });
-  
-  // Joystick de mirar
-  const lookContainer = document.getElementById('joystick-look');
-  const lookStick = document.getElementById('stick-look');
-  
-  let lookTouchId = null;
-  
-  lookContainer.addEventListener('touchstart', (e) => {
-    e.preventDefault();
+
+  // ========== ÁREA TÁCTIL PARA MIRAR (TODA LA PANTALLA) ==========
+  const lookArea = document.getElementById('touch-look-area');
+
+  lookArea.addEventListener('touchstart', (e) => {
+    // Ignorar si tocó el joystick, botones o selector de armas
+    const target = e.target;
+    if(target.closest('.joystick-container') ||
+       target.closest('#mobile-buttons') ||
+       target.closest('#weapon-selector')) {
+      return;
+    }
+
     const touch = e.changedTouches[0];
-    lookTouchId = touch.identifier;
-    joystickLook.active = true;
-    actualizarJoystick(touch, lookContainer, lookStick, joystickLook);
+    lookTouch.active = true;
+    lookTouch.touchId = touch.identifier;
+    lookTouch.lastX = touch.clientX;
+    lookTouch.lastY = touch.clientY;
   });
-  
-  lookContainer.addEventListener('touchmove', (e) => {
-    e.preventDefault();
+
+  lookArea.addEventListener('touchmove', (e) => {
     for(let touch of e.changedTouches) {
-      if(touch.identifier === lookTouchId) {
-        actualizarJoystick(touch, lookContainer, lookStick, joystickLook);
+      if(touch.identifier === lookTouch.touchId && lookTouch.active) {
+        e.preventDefault();
+
+        const deltaX = touch.clientX - lookTouch.lastX;
+        const deltaY = touch.clientY - lookTouch.lastY;
+
+        // Aplicar rotación directamente (sensibilidad ajustada)
+        rotationY -= deltaX * 0.003;
+        rotationX -= deltaY * 0.003;
+
+        // Limitar rotación vertical
+        rotationX = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, rotationX));
+
+        lookTouch.lastX = touch.clientX;
+        lookTouch.lastY = touch.clientY;
         break;
       }
     }
   });
-  
-  lookContainer.addEventListener('touchend', (e) => {
-    e.preventDefault();
+
+  lookArea.addEventListener('touchend', (e) => {
     for(let touch of e.changedTouches) {
-      if(touch.identifier === lookTouchId) {
-        joystickLook.active = false;
-        joystickLook.x = 0;
-        joystickLook.y = 0;
-        lookStick.style.transform = 'translate(-50%, -50%)';
-        lookTouchId = null;
+      if(touch.identifier === lookTouch.touchId) {
+        lookTouch.active = false;
+        lookTouch.touchId = null;
         break;
       }
     }
   });
-  
-  // Botón de disparo
+
+  // ========== BOTÓN DE DISPARO ==========
   document.getElementById('btn-shoot').addEventListener('touchstart', (e) => {
     e.preventDefault();
     if(!gameStarted || gamePaused || !canShoot || vidaJugador <= 0) return;
-    
+
     if(armaActual === 'granada') {
       lanzarGranada();
     } else if(armaActual === 'rayosofi') {
@@ -1891,18 +1978,25 @@ function inicializarControlesMobiles() {
       dispararArma();
     }
   });
-  
-  // Botón de bomba
+
+  // ========== BOTÓN DE BOMBA ==========
   document.getElementById('btn-bomb').addEventListener('touchstart', (e) => {
     e.preventDefault();
     lanzarBomba();
   });
-  
-  // Botones de cambio de arma
+
+  // ========== BOTONES DE CAMBIO DE ARMA ==========
   document.querySelectorAll('.weapon-btn').forEach(btn => {
     btn.addEventListener('touchstart', (e) => {
       e.preventDefault();
       const arma = btn.getAttribute('data-weapon');
+
+      // Remover clase active de todos
+      document.querySelectorAll('.weapon-btn').forEach(b => b.classList.remove('active'));
+
+      // Agregar clase active al seleccionado
+      btn.classList.add('active');
+
       cambiarArma(arma);
     });
   });
@@ -2241,14 +2335,7 @@ function animate() {
     if(keys['d']) player.position.add(right.multiplyScalar(moveSpeed));
   }
 
-  // Rotación con joystick o mouse
-  if(isMobile && joystickLook.active) {
-    rotationY -= joystickLook.x * 0.05 * deltaTime;
-    rotationX -= joystickLook.y * 0.05 * deltaTime;
-    rotationX = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, rotationX));
-  }
-
-  // Aplicar rotación
+  // Aplicar rotación (la rotación táctil ya se maneja en touchmove)
   player.rotation.y = rotationY;
   camera.rotation.x = rotationX;
 
